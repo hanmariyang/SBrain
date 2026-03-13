@@ -1,0 +1,31 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Django
+backend/brain.db
+backend/db.sqlite3
+backend/*.db
+
+# Environment
+.env
+backend/.env
+
+# macOS
+.DS_Store
+
+# Xcode
+app/SBrain.xcodeproj/xcuserdata/
+app/SBrain.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# IDE
+.idea/
+.vscode/
+*.swp

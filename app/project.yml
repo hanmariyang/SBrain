@@ -1,0 +1,28 @@
+name: SBrain
+options:
+  bundleIdPrefix: com.hanmari.sbrain
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+
+targets:
+  SBrain:
+    type: application
+    platform: macOS
+    sources:
+      - SBrain
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hanmari.sbrain
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        CODE_SIGN_ENTITLEMENTS: SBrain/SBrain.entitlements
+    entitlements:
+      path: SBrain/SBrain.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.network.client: true

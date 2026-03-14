@@ -3,9 +3,55 @@ import Combine
 
 class BackendManager: ObservableObject {
     @Published var isRunning = false
+    @Published var isDocker = false
     private var process: Process?
+    private var healthTimer: Timer?
 
     func start() {
+        // Check if Docker backend is already running on 8765
+        checkDockerBackend { [weak self] dockerRunning in
+            DispatchQueue.main.async {
+                if dockerRunning {
+                    self?.isRunning = true
+                    self?.isDocker = true
+                    print("[BackendManager] Docker backend detected on :8765")
+                    self?.startHealthCheck()
+                } else {
+                    self?.startLocalProcess()
+                }
+            }
+        }
+    }
+
+    private func checkDockerBackend(completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: "http://127.0.0.1:8765/api/status/") else {
+            completion(false)
+            return
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 2
+        URLSession.shared.dataTask(with: request) { _, response, _ in
+            let ok = (response as? HTTPURLResponse)?.statusCode == 200
+            completion(ok)
+        }.resume()
+    }
+
+    private func startHealthCheck() {
+        healthTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            self?.checkDockerBackend { running in
+                DispatchQueue.main.async {
+                    if !running && self?.isDocker == true {
+                        self?.isRunning = false
+                        self?.isDocker = false
+                        print("[BackendManager] Docker backend lost, falling back to local")
+                        self?.startLocalProcess()
+                    }
+                }
+            }
+        }
+    }
+
+    private func startLocalProcess() {
         guard process == nil else { return }
 
         let proc = Process()
@@ -30,6 +76,7 @@ class BackendManager: ObservableObject {
         proc.terminationHandler = { [weak self] _ in
             DispatchQueue.main.async {
                 self?.isRunning = false
+                self?.isDocker = false
             }
         }
 
@@ -38,16 +85,22 @@ class BackendManager: ObservableObject {
             process = proc
             DispatchQueue.main.async {
                 self.isRunning = true
+                self.isDocker = false
             }
         } catch {
-            print("Failed to start backend: \(error)")
+            print("[BackendManager] Failed to start backend: \(error)")
         }
     }
 
     func stop() {
-        process?.terminate()
+        healthTimer?.invalidate()
+        healthTimer = nil
+        if !isDocker {
+            process?.terminate()
+        }
         process = nil
         isRunning = false
+        isDocker = false
     }
 
     deinit {
@@ -55,7 +108,6 @@ class BackendManager: ObservableObject {
     }
 
     private func findBackendDir() -> String {
-        // Look for backend/ relative to the app bundle or working directory
         let candidates = [
             Bundle.main.bundlePath + "/../../../../../backend",
             Bundle.main.bundlePath + "/../../../../../../backend",
@@ -89,7 +141,6 @@ class BackendManager: ObservableObject {
                 return resolved
             }
         }
-        // Fallback to system Python
         let systemPythons = [
             "/opt/homebrew/bin/python3",
             "/usr/local/bin/python3",

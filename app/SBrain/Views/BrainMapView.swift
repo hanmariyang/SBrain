@@ -10,12 +10,20 @@ struct BrainMapView: View {
     @State private var dragStartRotY: Double = 0.0
     @State private var zoom: CGFloat = 1.0
 
+    // Pan (camera offset)
+    @State private var panX: CGFloat = 0.0
+    @State private var panY: CGFloat = 0.0
+    @State private var dragStartPanX: CGFloat = 0.0
+    @State private var dragStartPanY: CGFloat = 0.0
+    @State private var isDragPanning = false  // Option key held → pan mode
+
     // Focus animation
     @State private var focusOffsetYaw: Double = 0    // added to rotationY during focus
     @State private var focusOffsetPitch: Double = 0
     @State private var focusZoomTarget: CGFloat?
     @State private var focusAnimating = false
     @State private var autoRotationPaused = false
+    @State private var userHasInteracted = false  // permanently stops auto-rotation
 
     // Immersive transition (0 = overview, 1 = fully immersive)
     @State private var immersiveProgress: Double = 0.0
@@ -61,9 +69,11 @@ struct BrainMapView: View {
                         camDist: animatedCamDist,
                         isImmersive: isImmersive,
                         sphereCenter: sphereCenter,
-                        autoRotationPaused: autoRotationPaused,
+                        autoRotationPaused: autoRotationPaused || userHasInteracted,
                         focusOffsetYaw: focusOffsetYaw,
                         focusOffsetPitch: focusOffsetPitch,
+                        panX: panX,
+                        panY: panY,
                         searchResultPaths: noteStore.searchResultPaths,
                         multiSelectedPaths: Set(noteStore.multiSelectedPaths),
                         onTapNeuron: { id, isMultiSelect in
@@ -80,24 +90,46 @@ struct BrainMapView: View {
 
                 HandCursorOverlay()
             }
-            // Drag to rotate
+            // Drag to rotate (normal) or pan (Option+drag)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 5)
                     .onChanged { value in
                         cancelFocus()
-                        let s = 0.005
-                        rotationY = dragStartRotY + value.translation.width * s
-                        rotationX = dragStartRotX + value.translation.height * s
-                        rotationX = max(-.pi / 2, min(.pi / 2, rotationX))
+                        userHasInteracted = true
+
+                        // Check Option key for pan mode
+                        let isOptionDrag = NSEvent.modifierFlags.contains(.option)
+                        if isOptionDrag {
+                            if !isDragPanning {
+                                isDragPanning = true
+                                dragStartPanX = panX
+                                dragStartPanY = panY
+                            }
+                            panX = dragStartPanX + value.translation.width
+                            panY = dragStartPanY + value.translation.height
+                        } else {
+                            isDragPanning = false
+                            let s = 0.005
+                            rotationY = dragStartRotY + value.translation.width * s
+                            rotationX = dragStartRotX + value.translation.height * s
+                            rotationX = max(-.pi / 2, min(.pi / 2, rotationX))
+                        }
                     }
                     .onEnded { _ in
-                        dragStartRotX = rotationX
-                        dragStartRotY = rotationY
+                        if isDragPanning {
+                            dragStartPanX = panX
+                            dragStartPanY = panY
+                            isDragPanning = false
+                        } else {
+                            dragStartRotX = rotationX
+                            dragStartRotY = rotationY
+                        }
                     }
             )
             // Scroll to zoom
             .onScrollGesture { delta in
                 cancelFocus()
+                userHasInteracted = true
                 zoom = max(0.3, min(5.0, zoom + delta * 0.05))
             }
             // Trackpad pinch-to-zoom
@@ -105,6 +137,7 @@ struct BrainMapView: View {
                 MagnifyGesture()
                     .onChanged { value in
                         cancelFocus()
+                        userHasInteracted = true
                         let delta = value.magnification - 1.0
                         zoom = max(0.3, min(5.0, zoom + delta * 0.8))
                     }
@@ -148,6 +181,7 @@ struct BrainMapView: View {
                       handTracking.gestureTarget == .brainMap,
                       handTracking.mode == .orbiting else { return }
                 cancelFocus()
+                userHasInteracted = true
                 rotationY += Double(delta.x) * 3.0
                 rotationX += Double(delta.y) * 3.0
                 rotationX = max(-.pi / 2, min(.pi / 2, rotationX))
@@ -283,7 +317,7 @@ struct BrainMapView: View {
     private func hitTestFromHand(at point: CGPoint, graph: BrainGraph, size: CGSize) -> String? {
         guard size.width > 0 else { return nil }
         let time = Date().timeIntervalSinceReferenceDate
-        let autoY = autoRotationPaused ? 0 : time * (isImmersive ? 0.03 : 0.06)
+        let autoY = (autoRotationPaused || userHasInteracted) ? 0 : time * (isImmersive ? 0.03 : 0.06)
         let totalYaw = rotationY + autoY
         let totalPitch = rotationX
         let sc = sphereCenter
@@ -309,8 +343,8 @@ struct BrainMapView: View {
             let w = Double(size.width); let h = Double(size.height)
             let z = Double(zoom) * immersiveZoomMultiplier
             let us = min(w, h) * 0.38
-            let sx = CGFloat(w / 2 + rx * ps * us * z)
-            let sy = CGFloat(h / 2 - ry2 * ps * us * z)
+            let sx = CGFloat(w / 2 + rx * ps * us * z) + panX
+            let sy = CGFloat(h / 2 - ry2 * ps * us * z) + panY
             let nd = CGFloat((rz + cd + 1.5) / (cd + 3.0))
             let ds = 0.5 + Double(max(0, nd)) * 0.8
             let bs = (12.0 + Double(min(neuron.chunkCount, 10)) * 1.8) * ds
@@ -361,6 +395,8 @@ private struct BrainCanvas3D: View {
     let autoRotationPaused: Bool
     let focusOffsetYaw: Double
     let focusOffsetPitch: Double
+    let panX: CGFloat
+    let panY: CGFloat
     let searchResultPaths: Set<String>
     let multiSelectedPaths: Set<String>
     let onTapNeuron: (String, Bool) -> Void  // (id, isMultiSelect)
@@ -375,6 +411,7 @@ private struct BrainCanvas3D: View {
          rotationX: Binding<Double>, rotationY: Binding<Double>, zoom: CGFloat,
          camDist: Double, isImmersive: Bool, sphereCenter: (x: Double, y: Double, z: Double),
          autoRotationPaused: Bool, focusOffsetYaw: Double, focusOffsetPitch: Double,
+         panX: CGFloat, panY: CGFloat,
          searchResultPaths: Set<String>, multiSelectedPaths: Set<String>,
          onTapNeuron: @escaping (String, Bool) -> Void) {
         self.graph = graph
@@ -389,6 +426,8 @@ private struct BrainCanvas3D: View {
         self.autoRotationPaused = autoRotationPaused
         self.focusOffsetYaw = focusOffsetYaw
         self.focusOffsetPitch = focusOffsetPitch
+        self.panX = panX
+        self.panY = panY
         self.searchResultPaths = searchResultPaths
         self.multiSelectedPaths = multiSelectedPaths
         self.hasSearchResults = !searchResultPaths.isEmpty
@@ -467,8 +506,8 @@ private struct BrainCanvas3D: View {
         let h = Double(size.height)
         let z = Double(zoom)
         let uniformScale = min(w, h) * 0.38
-        let screenX = CGFloat(w / 2 + rx * projScale * uniformScale * z)
-        let screenY = CGFloat(h / 2 - ry2 * projScale * uniformScale * z)
+        let screenX = CGFloat(w / 2 + rx * projScale * uniformScale * z) + panX
+        let screenY = CGFloat(h / 2 - ry2 * projScale * uniformScale * z) + panY
 
         // Depth normalized 0..1 (closer = higher)
         let depthRange = max(camDist + 3.0, 1.0)
@@ -594,7 +633,8 @@ private struct BrainCanvas3D: View {
         let isHovered = hoveredNeuronId == neuron.id
         let isSelected = selectedNeuronId == neuron.id
         let isMultiSelected = multiSelectedPaths.contains(neuron.id)
-        let isHTML = neuron.filename.hasSuffix(".html") || neuron.filename.hasSuffix(".htm")
+        let isDB = neuron.id.hasPrefix("db:")
+        let isHTML = !isDB && (neuron.filename.hasSuffix(".html") || neuron.filename.hasSuffix(".htm"))
         let isSearchMatch = hasSearchResults && searchResultPaths.contains(neuron.id)
         let isDimmed = hasSearchResults && !isSearchMatch && !isHovered && !isSelected && !isMultiSelected
 
@@ -647,7 +687,10 @@ private struct BrainCanvas3D: View {
 
         // Core
         let coreRect = CGRect(x: sx - effectiveSize / 2, y: sy - effectiveSize / 2, width: effectiveSize, height: effectiveSize)
-        if isHTML {
+        if isDB {
+            // DB neurons: rounded square
+            context.fill(Path(roundedRect: coreRect, cornerRadius: effectiveSize * 0.2), with: .color(glowColor.opacity(coreOpacity * 0.7)))
+        } else if isHTML {
             context.fill(Path(roundedRect: coreRect, cornerRadius: effectiveSize * 0.25), with: .color(glowColor.opacity(coreOpacity * 0.7)))
         } else {
             context.fill(Path(ellipseIn: coreRect), with: .color(glowColor.opacity(coreOpacity * 0.7)))
@@ -665,9 +708,11 @@ private struct BrainCanvas3D: View {
         guard let targetId, let neuron = neuronMap[targetId],
               let pos = positions[targetId] else { return }
 
-        let isHTML = neuron.filename.hasSuffix(".html") || neuron.filename.hasSuffix(".htm")
+        let isDB = neuron.id.hasPrefix("db:")
+        let isHTML = !isDB && (neuron.filename.hasSuffix(".html") || neuron.filename.hasSuffix(".htm"))
         let name = (neuron.filename as NSString).deletingPathExtension
-        let label = "\(name)  \(isHTML ? "HTML" : "MD")"
+        let typeLabel = isDB ? "DB" : (isHTML ? "HTML" : "MD")
+        let label = "\(name)  \(typeLabel)"
 
         let styledText = Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
         let resolved = context.resolve(styledText)
@@ -677,7 +722,7 @@ private struct BrainCanvas3D: View {
         let bgRect = CGRect(x: pos.x - ms.width / 2 - hPad, y: pos.y - 30 - ms.height / 2 - vPad,
                              width: ms.width + hPad * 2, height: ms.height + vPad * 2)
         context.fill(Path(roundedRect: bgRect, cornerRadius: 8), with: .color(.black.opacity(0.85)))
-        let borderColor: Color = isHTML ? .orange : .cyan
+        let borderColor: Color = isDB ? .green : (isHTML ? .orange : .cyan)
         context.stroke(Path(roundedRect: bgRect, cornerRadius: 8), with: .color(borderColor.opacity(0.4)), lineWidth: 1)
         context.draw(resolved, at: CGPoint(x: pos.x, y: pos.y - 30))
     }
@@ -712,6 +757,11 @@ private struct BrainCanvas3D: View {
         if isHovered { return .white }
         if isMultiSelected { return .mint }
         if isSearchMatch { return .yellow }
+        // DB table neurons — green/emerald hue
+        if neuron.id.hasPrefix("db:") {
+            let hue = 0.35 + (neuron.x + neuron.y) / 4 * 0.08
+            return Color(hue: hue, saturation: 0.7, brightness: 0.85)
+        }
         if isHTML {
             let hue = 0.08 + (neuron.x + neuron.y) / 4 * 0.05
             return Color(hue: hue, saturation: 0.7, brightness: 0.9)

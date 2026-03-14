@@ -58,4 +58,88 @@ class APIClient {
         let (data, _) = try await URLSession.shared.data(from: url)
         return try JSONDecoder().decode(BrainGraph.self, from: data)
     }
+
+    // MARK: - Database Browser
+
+    func dbConnect(connectionURL: String) async throws -> DBConnectionInfo {
+        let url = URL(string: "\(baseURL)/db/connect/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["connection_url": connectionURL])
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(DBConnectionInfo.self, from: data)
+    }
+
+    func dbSchemas(connectionURL: String) async throws -> [DBSchema] {
+        let encoded = connectionURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let url = URL(string: "\(baseURL)/db/schemas/?url=\(encoded)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([DBSchema].self, from: data)
+    }
+
+    func dbTables(connectionURL: String, schema: String) async throws -> [DBTable] {
+        let encoded = connectionURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let url = URL(string: "\(baseURL)/db/tables/?url=\(encoded)&schema=\(schema)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([DBTable].self, from: data)
+    }
+
+    func dbColumns(connectionURL: String, schema: String, table: String) async throws -> [DBColumn] {
+        let encoded = connectionURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let url = URL(string: "\(baseURL)/db/columns/?url=\(encoded)&schema=\(schema)&table=\(table)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([DBColumn].self, from: data)
+    }
+
+    func dbRows(connectionURL: String, schema: String, table: String, limit: Int = 200, offset: Int = 0) async throws -> DBRowsResponse {
+        let encoded = connectionURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let url = URL(string: "\(baseURL)/db/rows/?url=\(encoded)&schema=\(schema)&table=\(table)&limit=\(limit)&offset=\(offset)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(DBRowsResponse.self, from: data)
+    }
+
+    func dbSearch(connectionURL: String, query: String, limit: Int = 50) async throws -> [DBSearchResult] {
+        let url = URL(string: "\(baseURL)/db/search/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["connection_url": connectionURL, "query": query, "limit": limit]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode([DBSearchResult].self, from: data)
+    }
+
+    func dbGraph(connectionURL: String) async throws -> BrainGraph {
+        let encoded = connectionURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let url = URL(string: "\(baseURL)/db/graph/?url=\(encoded)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(BrainGraph.self, from: data)
+    }
+
+    // MARK: - DB Mirror (Download / Sync)
+
+    func dbDownload(connectionURL: String) async throws {
+        let url = URL(string: "\(baseURL)/db/download/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["connection_url": connectionURL])
+        let _ = try await URLSession.shared.data(for: request)
+    }
+
+    func dbDownloadStatus() async throws -> DBDownloadStatus {
+        let url = URL(string: "\(baseURL)/db/download/status/")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(DBDownloadStatus.self, from: data)
+    }
+
+    func dbDeleteMirror(connectionURL: String) async throws {
+        let url = URL(string: "\(baseURL)/db/mirror/delete/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["connection_url": connectionURL])
+        let _ = try await URLSession.shared.data(for: request)
+    }
 }

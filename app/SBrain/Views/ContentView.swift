@@ -3,11 +3,13 @@ import SwiftUI
 enum ViewMode: String, CaseIterable {
     case brain = "brain"
     case list = "list"
+    case database = "database"
 
     var icon: String {
         switch self {
         case .brain: return "brain"
         case .list: return "list.bullet"
+        case .database: return "cylinder.split.1x2"
         }
     }
 
@@ -15,6 +17,7 @@ enum ViewMode: String, CaseIterable {
         switch self {
         case .brain: return "Brain Map"
         case .list: return "List"
+        case .database: return "Database"
         }
     }
 }
@@ -22,6 +25,7 @@ enum ViewMode: String, CaseIterable {
 struct ContentView: View {
     @EnvironmentObject var noteStore: NoteStore
     @EnvironmentObject var backendManager: BackendManager
+    @EnvironmentObject var dbStore: DatabaseStore
     @State private var viewMode: ViewMode = .list
 
     var body: some View {
@@ -34,7 +38,11 @@ struct ContentView: View {
                     MemorizeProgressView(status: status)
                 }
 
-                if noteStore.hasProjects {
+                if viewMode == .database {
+                    // Database browser (available even without projects)
+                    if noteStore.hasProjects { ProjectTabBar() }
+                    DatabaseBrowserView()
+                } else if noteStore.hasProjects {
                     // Project tabs
                     ProjectTabBar()
 
@@ -43,6 +51,8 @@ struct ContentView: View {
                         FolderTreeView()
                     case .brain:
                         BrainMapView()
+                    case .database:
+                        EmptyView() // handled above
                     }
                 } else {
                     emptyState
@@ -51,15 +61,23 @@ struct ContentView: View {
             .frame(minWidth: 500)
             .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
 
-            // Right: File preview
-            MemoryDetailView()
-                .frame(minWidth: 350, idealWidth: 450)
+            // Right: Detail panel
+            if viewMode == .database {
+                DBDetailView()
+                    .frame(minWidth: 350, idealWidth: 450)
+            } else {
+                MemoryDetailView()
+                    .frame(minWidth: 350, idealWidth: 450)
+            }
         }
         .frame(minWidth: 900, minHeight: 550)
         .preferredColorScheme(.dark)
         .task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             noteStore.restoreProjects()
+        }
+        .onChange(of: dbStore.dbBrainGraph?.neurons.count) { _, _ in
+            noteStore.dbBrainGraph = dbStore.dbBrainGraph
         }
     }
 

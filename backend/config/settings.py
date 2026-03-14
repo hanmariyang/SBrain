@@ -61,3 +61,8 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")  # Separate key for Voyage AI embeddings
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "voyage-3")
 EMBEDDING_DIMENSION = 1024  # voyage-3 dimension
+
+# DB cache settings
+CACHE_DB_URL = os.getenv("CACHE_DB_URL", "postgresql://localhost:5432/sbrain_cache")
+CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "300"))  # 5 minutes
+CACHE_ROW_DELTA_THRESHOLD = float(os.getenv("CACHE_ROW_DELTA_THRESHOLD", "0.05"))  # 5%

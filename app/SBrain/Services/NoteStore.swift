@@ -15,6 +15,7 @@ class NoteStore: ObservableObject {
 
     // Brain graph (merged from all projects)
     @Published var brainGraph: BrainGraph?
+    @Published var dbBrainGraph: BrainGraph?  // injected from DatabaseStore
 
     // Backend (search only)
     @Published var searchResults: [SearchResult] = []
@@ -43,9 +44,55 @@ class NoteStore: ObservableObject {
         return projects.first { $0.id == id }
     }
 
+    /// Merged graph: file neurons + DB neurons (DB offset to avoid overlap)
+    var mergedBrainGraph: BrainGraph? {
+        guard let fileGraph = brainGraph else { return dbBrainGraph }
+        guard let db = dbBrainGraph, !db.neurons.isEmpty else { return fileGraph }
+
+        // Offset DB neurons so they form separate clusters from file neurons.
+        // Group DB neurons by schema and place each schema as a distinct sphere.
+        let dbSchemas = Dictionary(grouping: db.neurons) { neuron -> String in
+            // id format: "db:schema_name.table_name"
+            let parts = neuron.id.dropFirst(3).split(separator: ".", maxSplits: 1)
+            return parts.first.map(String.init) ?? "default"
+        }
+        let schemaList = dbSchemas.keys.sorted()
+        let fileMaxX = fileGraph.neurons.map(\.x).max() ?? 1.0
+
+        // Place DB schemas to the right of file neurons, each as a separate sphere
+        var offsetNeurons: [Neuron] = []
+        let dbBaseX = fileMaxX + 1.5  // gap between file and DB clusters
+        let schemaSpacing = 2.5
+
+        for (idx, schema) in schemaList.enumerated() {
+            guard let neurons = dbSchemas[schema] else { continue }
+            let centerX = dbBaseX + Double(idx) * schemaSpacing
+
+            for neuron in neurons {
+                // neuron.x/y/z are in [-1,1], scale to sphere radius ~0.8
+                let moved = Neuron(
+                    id: neuron.id,
+                    filename: neuron.filename,
+                    preview: neuron.preview,
+                    x: centerX + neuron.x * 0.8,
+                    y: neuron.y * 0.8,
+                    z: neuron.z * 0.8,
+                    chunkCount: neuron.chunkCount,
+                    projectTag: neuron.projectTag
+                )
+                offsetNeurons.append(moved)
+            }
+        }
+
+        return BrainGraph(
+            neurons: fileGraph.neurons + offsetNeurons,
+            synapses: fileGraph.synapses + db.synapses
+        )
+    }
+
     /// Filtered graph: only neurons/synapses for selected project (or all if nil)
     var filteredBrainGraph: BrainGraph? {
-        guard let graph = brainGraph else { return nil }
+        guard let graph = mergedBrainGraph else { return nil }
         guard let project = selectedProject else { return graph }
 
         let projectPrefix = project.path

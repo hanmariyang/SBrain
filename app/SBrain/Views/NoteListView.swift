@@ -129,28 +129,28 @@ struct FileRow: View {
     var body: some View {
         Button(action: { noteStore.selectFile(path: node.path) }) {
             HStack(alignment: .top, spacing: 8) {
-                // Neuron indicator
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                isSelected ? Color.cyan : Color.purple.opacity(0.8),
-                                isSelected ? Color.cyan.opacity(0.2) : Color.purple.opacity(0.15),
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 5
-                        )
-                    )
-                    .frame(width: 8, height: 8)
-                    .shadow(color: isSelected ? .cyan.opacity(0.6) : .clear, radius: 4)
-                    .padding(.top, 4)
+                // File type icon
+                Image(systemName: fileIcon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(fileIconColor)
+                    .frame(width: 16)
+                    .padding(.top, 2)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text((node.name as NSString).deletingPathExtension)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(isSelected ? 1.0 : 0.8))
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text((node.name as NSString).deletingPathExtension)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white.opacity(isSelected ? 1.0 : 0.8))
+                            .lineLimit(1)
+
+                        Text(fileExtension.uppercased())
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(fileIconColor.opacity(0.7))
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(fileIconColor.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 2))
+                    }
 
                     if !node.preview.isEmpty {
                         Text(node.preview)
@@ -181,6 +181,52 @@ struct FileRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private var fileExtension: String {
+        (node.name as NSString).pathExtension.lowercased()
+    }
+
+    private var fileIcon: String {
+        switch fileExtension {
+        case "html", "htm":
+            return "globe"
+        case "md", "markdown":
+            return "doc.text"
+        case "txt":
+            return "doc.plaintext"
+        case "json":
+            return "curlybraces"
+        case "yaml", "yml":
+            return "list.bullet.indent"
+        case "csv":
+            return "tablecells"
+        case "pdf":
+            return "doc.richtext"
+        default:
+            return "doc"
+        }
+    }
+
+    private var fileIconColor: Color {
+        switch fileExtension {
+        case "html", "htm":
+            return .orange
+        case "md", "markdown":
+            return .cyan
+        case "txt":
+            return .white.opacity(0.5)
+        case "json":
+            return .yellow
+        case "yaml", "yml":
+            return .green
+        case "csv":
+            return .mint
+        case "pdf":
+            return .red
+        default:
+            return .purple
+        }
     }
 
     private func formatDate(_ date: Date) -> String {

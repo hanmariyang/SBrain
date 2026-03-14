@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C1BB40C09A03F90B8BE575B /* HandCursorOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7A5190CBD9E8F4C1DF06DA /* HandCursorOverlay.swift */; };
 		1A834DA447A414DA0D955400 /* HandTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */; };
+		404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F625EF94764920370B930 /* DatabaseStore.swift */; };
 		7B6A5A92D196C82E4CA1BC36 /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714A8F991F10DB023F90B523 /* FolderScanner.swift */; };
 		82F1FF5E887C7DE2EE0CD0BF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D342196863002E996A7027 /* ContentView.swift */; };
 		858D2381E38B796A44F304D8 /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74140C2CF4145F55F886B78 /* NoteListView.swift */; };
@@ -21,15 +22,18 @@
 		D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7544CAB23D252B03FB65F9C /* SBrainApp.swift */; };
 		D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F737901CA8A7C63C9E7127A /* SearchBar.swift */; };
 		E23F9200A4257323F03BE9C0 /* BrainMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE9E28089788162289A190F /* BrainMapView.swift */; };
+		E3CC5871219127F795FBA799 /* DatabaseBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		09F625507856F470275E96B7 /* LocalGraphBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalGraphBuilder.swift; sourceTree = "<group>"; };
 		1063843C8FF0AAD02172AB79 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		3F737901CA8A7C63C9E7127A /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
+		502F625EF94764920370B930 /* DatabaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseStore.swift; sourceTree = "<group>"; };
 		628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingManager.swift; sourceTree = "<group>"; };
 		714A8F991F10DB023F90B523 /* FolderScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderScanner.swift; sourceTree = "<group>"; };
 		8E21D81A3BB7AB638BA4B919 /* SBrain.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBrain.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseBrowserView.swift; sourceTree = "<group>"; };
 		CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendManager.swift; sourceTree = "<group>"; };
 		CEE9E28089788162289A190F /* BrainMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainMapView.swift; sourceTree = "<group>"; };
 		CF7A5190CBD9E8F4C1DF06DA /* HandCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCursorOverlay.swift; sourceTree = "<group>"; };
@@ -76,6 +80,7 @@
 			children = (
 				1063843C8FF0AAD02172AB79 /* APIClient.swift */,
 				CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */,
+				502F625EF94764920370B930 /* DatabaseStore.swift */,
 				714A8F991F10DB023F90B523 /* FolderScanner.swift */,
 				628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */,
 				09F625507856F470275E96B7 /* LocalGraphBuilder.swift */,
@@ -97,6 +102,7 @@
 			children = (
 				CEE9E28089788162289A190F /* BrainMapView.swift */,
 				D5D342196863002E996A7027 /* ContentView.swift */,
+				9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */,
 				CF7A5190CBD9E8F4C1DF06DA /* HandCursorOverlay.swift */,
 				DB7D097F10003525C94A8B00 /* NoteDetailView.swift */,
 				D74140C2CF4145F55F886B78 /* NoteListView.swift */,
@@ -164,6 +170,8 @@
 				C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */,
 				E23F9200A4257323F03BE9C0 /* BrainMapView.swift in Sources */,
 				82F1FF5E887C7DE2EE0CD0BF /* ContentView.swift in Sources */,
+				E3CC5871219127F795FBA799 /* DatabaseBrowserView.swift in Sources */,
+				404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */,
 				7B6A5A92D196C82E4CA1BC36 /* FolderScanner.swift in Sources */,
 				0C1BB40C09A03F90B8BE575B /* HandCursorOverlay.swift in Sources */,
 				1A834DA447A414DA0D955400 /* HandTrackingManager.swift in Sources */,

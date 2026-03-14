@@ -238,6 +238,7 @@ struct ProjectTab: View {
 struct TopBar: View {
     @EnvironmentObject var noteStore: NoteStore
     @EnvironmentObject var backendManager: BackendManager
+    @EnvironmentObject var handTracking: HandTrackingManager
     @Binding var viewMode: ViewMode
 
     var body: some View {
@@ -293,6 +294,28 @@ struct TopBar: View {
             .padding(2)
             .background(.white.opacity(0.05))
             .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            // Hand tracking toggle
+            Button(action: { handTracking.isEnabled.toggle() }) {
+                Image(systemName: handTracking.isEnabled ? "hand.raised.fill" : "hand.raised")
+                    .font(.system(size: 12))
+                    .padding(6)
+                    .background(handTracking.isEnabled
+                        ? (handTracking.isTracking ? Color.green.opacity(0.2) : Color.orange.opacity(0.15))
+                        : .white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(handTracking.isEnabled ? Color.green.opacity(0.4) : .clear, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(handTracking.isEnabled
+                ? (handTracking.isTracking ? .green : .orange)
+                : .white.opacity(0.6))
+            .help(handTracking.isEnabled ? "손 추적 끄기" : "손 추적 켜기")
+            .opacity(handTracking.cameraAuthorized ? 1 : 0.3)
+            .disabled(!handTracking.cameraAuthorized && !handTracking.isEnabled)
 
             // Add folder button
             Button(action: { noteStore.addFolder() }) {

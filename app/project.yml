@@ -20,6 +20,7 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        INFOPLIST_KEY_NSCameraUsageDescription: "손 제스처 인식을 위해 카메라를 사용합니다"
         CODE_SIGN_ENTITLEMENTS: SBrain/SBrain.entitlements
     entitlements:
       path: SBrain/SBrain.entitlements

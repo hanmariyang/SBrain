@@ -9,6 +9,10 @@ class NoteStore: ObservableObject {
     @Published var selectedFilePath: String?
     @Published var selectedFileContent: String?
 
+    // Multi-selection (hand gesture dwell select)
+    @Published var multiSelectedPaths: [String] = []
+    @Published var browseIndex: Int = 0
+
     // Brain graph (merged from all projects)
     @Published var brainGraph: BrainGraph?
 
@@ -169,6 +173,44 @@ class NoteStore: ObservableObject {
     func selectFile(path: String) {
         selectedFilePath = path
         selectedFileContent = FolderScanner.readContent(at: path)
+    }
+
+    /// Toggle a path in multi-selection (for dwell select)
+    func toggleMultiSelect(path: String) {
+        if let idx = multiSelectedPaths.firstIndex(of: path) {
+            multiSelectedPaths.remove(at: idx)
+            // Adjust browseIndex
+            if multiSelectedPaths.isEmpty {
+                browseIndex = 0
+            } else {
+                browseIndex = min(browseIndex, multiSelectedPaths.count - 1)
+            }
+        } else {
+            multiSelectedPaths.append(path)
+            browseIndex = multiSelectedPaths.count - 1
+            // Also select the file for viewing
+            selectFile(path: path)
+        }
+    }
+
+    /// Browse next in multi-selection
+    func browseNext() {
+        guard !multiSelectedPaths.isEmpty else { return }
+        browseIndex = (browseIndex + 1) % multiSelectedPaths.count
+        selectFile(path: multiSelectedPaths[browseIndex])
+    }
+
+    /// Browse previous in multi-selection
+    func browsePrevious() {
+        guard !multiSelectedPaths.isEmpty else { return }
+        browseIndex = (browseIndex - 1 + multiSelectedPaths.count) % multiSelectedPaths.count
+        selectFile(path: multiSelectedPaths[browseIndex])
+    }
+
+    /// Clear multi-selection
+    func clearMultiSelection() {
+        multiSelectedPaths.removeAll()
+        browseIndex = 0
     }
 
     var selectedFileName: String? {

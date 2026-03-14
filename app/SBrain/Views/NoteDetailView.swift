@@ -1,8 +1,19 @@
 import SwiftUI
 import WebKit
 
+/// Shared proxy to scroll the active WKWebView from hand gestures
+class WebViewScrollProxy: ObservableObject {
+    weak var webView: WKWebView?
+    func scrollBy(deltaY: CGFloat) {
+        guard let wv = webView else { return }
+        wv.evaluateJavaScript("window.scrollBy(0, \(deltaY))", completionHandler: nil)
+    }
+}
+
 struct MemoryDetailView: View {
     @EnvironmentObject var noteStore: NoteStore
+    @EnvironmentObject var handTracking: HandTrackingManager
+    @StateObject private var scrollProxy = WebViewScrollProxy()
     @State private var isResultsCollapsed = false
 
     private var searchTerms: [String] {
@@ -24,6 +35,11 @@ struct MemoryDetailView: View {
                     RecallResultStrip(isCollapsed: $isResultsCollapsed)
                 }
 
+                // Multi-selection strip (hand gesture dwell select)
+                if !noteStore.multiSelectedPaths.isEmpty {
+                    multiSelectionStrip
+                }
+
                 if let content = noteStore.selectedFileContent,
                    let fileName = noteStore.selectedFileName {
                     detailHeader(fileName: fileName)
@@ -42,18 +58,132 @@ struct MemoryDetailView: View {
                     // Render based on file type
                     if let path = noteStore.selectedFilePath,
                        FolderScanner.fileType(for: path) == .html {
-                        HTMLWebView(html: content, basePath: path, highlightTerms: searchTerms)
+                        HTMLWebView(html: content, basePath: path, highlightTerms: searchTerms, scrollProxy: scrollProxy)
                     } else {
-                        MarkdownWebView(markdown: content, highlightTerms: searchTerms)
+                        MarkdownWebView(markdown: content, highlightTerms: searchTerms, scrollProxy: scrollProxy)
                     }
+                } else if !noteStore.multiSelectedPaths.isEmpty {
+                    // Multi-selected but no file loaded yet: prompt to browse
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "hand.point.up.left.and.text")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.white.opacity(0.3))
+                        Text("\(noteStore.multiSelectedPaths.count)개 선택됨")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
+                        Text("위 목록에서 항목을 선택하거나 4손가락 스와이프로 탐색")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.25))
+                    }
+                    Spacer()
                 } else if noteStore.isSearchActive {
-                    // No file selected but search active: show full result list
                     RecallResultListView()
                 } else {
                     emptyState
                 }
             }
+            // Hand gesture: victory (✌️) joystick scroll
+            // scrollSpeed is position-based: hold hand higher = scroll up, lower = scroll down
+            .onChange(of: handTracking.scrollSpeed) { _, speed in
+                guard handTracking.gestureTarget == .viewer,
+                      handTracking.mode == .scrolling,
+                      noteStore.selectedFileContent != nil,
+                      abs(speed) > 0.01 else { return }
+                scrollProxy.scrollBy(deltaY: speed * 8)
+            }
+            // Hand gesture: fourFingers swipe browses multi-selected
+            .onChange(of: handTracking.didSwipeRight) { _, swiped in
+                guard handTracking.gestureTarget == .viewer else { return }
+                if swiped { noteStore.browseNext() }
+            }
+            .onChange(of: handTracking.didSwipeLeft) { _, swiped in
+                guard handTracking.gestureTarget == .viewer else { return }
+                if swiped { noteStore.browsePrevious() }
+            }
         }
+    }
+
+    // MARK: - Multi-Selection Strip
+
+    private var multiSelectionStrip: some View {
+        HStack(spacing: 0) {
+            // Browse left button
+            Button(action: { noteStore.browsePrevious() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(width: 24, height: 28)
+            }
+            .buttonStyle(.plain)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Array(noteStore.multiSelectedPaths.enumerated()), id: \.element) { idx, path in
+                        let name = (URL(fileURLWithPath: path).lastPathComponent as NSString).deletingPathExtension
+                        let isCurrent = idx == noteStore.browseIndex
+
+                        HStack(spacing: 4) {
+                            Text(name)
+                                .font(.system(size: 10, weight: isCurrent ? .bold : .regular, design: .monospaced))
+                                .foregroundStyle(isCurrent ? .white : .white.opacity(0.5))
+                                .lineLimit(1)
+                                .onTapGesture {
+                                    noteStore.browseIndex = idx
+                                    noteStore.selectFile(path: path)
+                                }
+
+                            // Remove button — separate from text tap area
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.3))
+                                .onTapGesture {
+                                    noteStore.toggleMultiSelect(path: path)
+                                }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(isCurrent ? Color.cyan.opacity(0.2) : Color.white.opacity(0.05))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .strokeBorder(isCurrent ? Color.cyan.opacity(0.4) : Color.clear, lineWidth: 1)
+                        )
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+
+            // Browse right button
+            Button(action: { noteStore.browseNext() }) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(width: 24, height: 28)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Counter
+            Text("\(noteStore.browseIndex + 1)/\(noteStore.multiSelectedPaths.count)")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.3))
+                .padding(.trailing, 8)
+
+            // Clear all
+            Button(action: { noteStore.clearMultiSelection() }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 8)
+        }
+        .frame(height: 32)
+        .background(Color(red: 0.08, green: 0.08, blue: 0.14))
     }
 
     private func detailHeader(fileName: String) -> some View {
@@ -324,6 +454,7 @@ struct RecallResultStrip: View {
 struct MarkdownWebView: NSViewRepresentable {
     let markdown: String
     var highlightTerms: [String] = []
+    var scrollProxy: WebViewScrollProxy?
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -332,10 +463,12 @@ struct MarkdownWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
         webView.navigationDelegate = context.coordinator
+        scrollProxy?.webView = webView
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        scrollProxy?.webView = webView
         let escaped = escapeForJS(markdown)
         let termsJSON = escapeForJS(highlightTerms.map { "\"\($0)\"" }.joined(separator: ","))
         let html = Self.buildHTML(markdownContent: escaped, highlightTermsJSON: "[\(termsJSON)]")
@@ -697,6 +830,7 @@ struct HTMLWebView: NSViewRepresentable {
     let html: String
     let basePath: String
     var highlightTerms: [String] = []
+    var scrollProxy: WebViewScrollProxy?
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -705,10 +839,12 @@ struct HTMLWebView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
         webView.navigationDelegate = context.coordinator
+        scrollProxy?.webView = webView
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
+        scrollProxy?.webView = webView
         let baseURL = URL(fileURLWithPath: basePath).deletingLastPathComponent()
 
         if highlightTerms.isEmpty {

@@ -79,15 +79,26 @@ struct LocalGraphBuilder {
         // 4. Build synapses
         var synapses: [Synapse] = []
 
-        // Same-folder connections (strong)
+        // Same-folder connections (strong) — cap to neighbor links to avoid O(n²)
         for (_, ids) in folderNeuronIds {
-            for i in 0..<ids.count {
-                for j in (i + 1)..<ids.count {
-                    synapses.append(Synapse(
-                        source: ids[i],
-                        target: ids[j],
-                        strength: 0.8
-                    ))
+            let count = ids.count
+            if count <= 8 {
+                // Small folder: fully connected
+                for i in 0..<count {
+                    for j in (i + 1)..<count {
+                        synapses.append(Synapse(source: ids[i], target: ids[j], strength: 0.8))
+                    }
+                }
+            } else {
+                // Large folder: ring + hub connections (linear, not quadratic)
+                for i in 0..<count {
+                    let next = (i + 1) % count
+                    synapses.append(Synapse(source: ids[i], target: ids[next], strength: 0.8))
+                }
+                // Connect first node to a few spread-out nodes
+                let step = max(count / 4, 1)
+                for k in stride(from: step, to: count, by: step) {
+                    synapses.append(Synapse(source: ids[0], target: ids[k], strength: 0.6))
                 }
             }
         }

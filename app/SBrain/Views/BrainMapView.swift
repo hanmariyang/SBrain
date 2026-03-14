@@ -2,7 +2,7 @@ import SwiftUI
 
 struct BrainMapView: View {
     @EnvironmentObject var noteStore: NoteStore
-    @State private var hoveredNeuron: String?
+    @State private var hoveredNeuronId: String?
     @State private var scale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @State private var dragStart: CGSize = .zero
@@ -11,10 +11,14 @@ struct BrainMapView: View {
         GeometryReader { geo in
             ZStack {
                 Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1))
-                AmbientParticles()
 
                 if let graph = noteStore.brainGraph, !graph.neurons.isEmpty {
-                    graphContent(graph: graph, size: geo.size)
+                    BrainCanvas(
+                        graph: graph,
+                        selectedNeuronId: noteStore.selectedFilePath,
+                        hoveredNeuronId: $hoveredNeuronId,
+                        onTapNeuron: { id in noteStore.selectFile(path: id) }
+                    )
                 } else {
                     BrainMapEmptyState(isIngesting: noteStore.isIngesting)
                 }
@@ -25,31 +29,6 @@ struct BrainMapView: View {
             .gesture(panGesture)
         }
         .clipped()
-    }
-
-    @ViewBuilder
-    private func graphContent(graph: BrainGraph, size: CGSize) -> some View {
-        Canvas { context, canvasSize in
-            drawSynapses(context: context, size: canvasSize, graph: graph)
-        }
-
-        ForEach(graph.neurons) { neuron in
-            let isSelected = noteStore.selectedFilePath == neuron.id
-            NeuronNode(
-                neuron: neuron,
-                isHovered: hoveredNeuron == neuron.id,
-                isSelected: isSelected
-            )
-            .position(
-                x: neuronX(neuron, in: size),
-                y: neuronY(neuron, in: size)
-            )
-            .onHover { h in hoveredNeuron = h ? neuron.id : nil }
-            .onTapGesture {
-                // neuron.id is the file path (from LocalGraphBuilder)
-                noteStore.selectFile(path: neuron.id)
-            }
-        }
     }
 
     private var magnifyGesture: some Gesture {
@@ -67,47 +46,242 @@ struct BrainMapView: View {
             }
             .onEnded { _ in dragStart = offset }
     }
+}
 
-    private func neuronX(_ neuron: Neuron, in size: CGSize) -> CGFloat {
-        let padding: CGFloat = 80
-        return padding + CGFloat(neuron.x) * (size.width - padding * 2)
+// MARK: - Brain Canvas (single Canvas for all rendering)
+
+private struct BrainCanvas: View {
+    let graph: BrainGraph
+    let selectedNeuronId: String?
+    @Binding var hoveredNeuronId: String?
+    let onTapNeuron: (String) -> Void
+
+    private let neuronMap: [String: Neuron]
+    private let cappedSynapses: [Synapse]
+
+    @State private var cachedSize: CGSize = .zero
+
+    init(graph: BrainGraph, selectedNeuronId: String?, hoveredNeuronId: Binding<String?>, onTapNeuron: @escaping (String) -> Void) {
+        self.graph = graph
+        self.selectedNeuronId = selectedNeuronId
+        self._hoveredNeuronId = hoveredNeuronId
+        self.onTapNeuron = onTapNeuron
+        self.neuronMap = Dictionary(uniqueKeysWithValues: graph.neurons.map { ($0.id, $0) })
+
+        if graph.synapses.count > 500 {
+            let sorted = graph.synapses.sorted { $0.strength > $1.strength }
+            self.cappedSynapses = Array(sorted.prefix(500))
+        } else {
+            self.cappedSynapses = graph.synapses
+        }
     }
 
-    private func neuronY(_ neuron: Neuron, in size: CGSize) -> CGFloat {
-        let padding: CGFloat = 80
-        return padding + CGFloat(neuron.y) * (size.height - padding * 2)
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            Canvas(opaque: true, colorMode: .linear, rendersAsynchronously: true) { context, size in
+                drawBackground(&context, size)
+                drawParticles(&context, size, time)
+                drawAllSynapses(&context, size)
+                drawAllNeurons(&context, size, time)
+                drawHoverLabel(&context, size)
+            }
+            .onContinuousHover { phase in
+                switch phase {
+                case .active(let location):
+                    hoveredNeuronId = hitTest(at: location)
+                case .ended:
+                    hoveredNeuronId = nil
+                @unknown default:
+                    break
+                }
+            }
+            .onTapGesture { location in
+                if let id = hitTest(at: location) {
+                    onTapNeuron(id)
+                }
+            }
+            .overlay {
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { cachedSize = geo.size }
+                        .onChange(of: geo.size) { cachedSize = $1 }
+                }
+            }
+        }
     }
 
-    private func drawSynapses(context: GraphicsContext, size: CGSize, graph: BrainGraph) {
-        let neuronMap = Dictionary(uniqueKeysWithValues: graph.neurons.map { ($0.id, $0) })
+    // MARK: - Hit Testing
 
-        for synapse in graph.synapses {
+    private func hitTest(at point: CGPoint) -> String? {
+        let s = cachedSize
+        guard s.width > 0 else { return nil }
+        for neuron in graph.neurons {
+            let nx = posX(neuron, s)
+            let ny = posY(neuron, s)
+            let radius = max(nodeRadius(neuron), 20)
+            let dx = point.x - nx
+            let dy = point.y - ny
+            if dx * dx + dy * dy <= radius * radius {
+                return neuron.id
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Draw Background
+
+    private func drawBackground(_ context: inout GraphicsContext, _ size: CGSize) {
+        let bgColor = Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1))
+        let bgRect = CGRect(origin: .zero, size: size)
+        context.fill(Path(bgRect), with: .color(bgColor))
+    }
+
+    // MARK: - Draw Particles
+
+    private func drawParticles(_ context: inout GraphicsContext, _ size: CGSize, _ time: Double) {
+        for i in 0..<20 {
+            let seed = Double(i) * 137.508
+            let phase = time * 0.02 + seed
+            let px = (sin(phase * 0.7 + seed) * 0.5 + 0.5) * size.width
+            let py = (cos(phase * 0.5 + seed * 1.3) * 0.5 + 0.5) * size.height
+            let pSize: CGFloat = 1.5 + CGFloat(i % 3)
+            let pOpacity = 0.06 + 0.08 * sin(phase * 2)
+            let rect = CGRect(x: px - pSize / 2, y: py - pSize / 2, width: pSize, height: pSize)
+            let pColor = Color.cyan.opacity(pOpacity)
+            context.fill(Path(ellipseIn: rect), with: .color(pColor))
+        }
+    }
+
+    // MARK: - Draw Synapses
+
+    private func drawAllSynapses(_ context: inout GraphicsContext, _ size: CGSize) {
+        let maxDistSq = size.width * size.width * 0.5
+
+        for synapse in cappedSynapses {
             guard let source = neuronMap[synapse.source],
                   let target = neuronMap[synapse.target] else { continue }
 
-            let from = CGPoint(x: neuronX(source, in: size), y: neuronY(source, in: size))
-            let to = CGPoint(x: neuronX(target, in: size), y: neuronY(target, in: size))
+            let fromX = posX(source, size)
+            let fromY = posY(source, size)
+            let toX = posX(target, size)
+            let toY = posY(target, size)
 
-            let opacity = synapse.strength * 0.6
-            let lineWidth = 0.5 + synapse.strength * 2.0
-            let mid = CGPoint(
-                x: (from.x + to.x) / 2 + (from.y - to.y) * 0.15,
-                y: (from.y + to.y) / 2 + (to.x - from.x) * 0.15
-            )
+            let dx = toX - fromX
+            let dy = toY - fromY
+            if dx * dx + dy * dy > maxDistSq { continue }
+
+            let from = CGPoint(x: fromX, y: fromY)
+            let to = CGPoint(x: toX, y: toY)
+
+            let midX = (fromX + toX) / 2 + (fromY - toY) * 0.15
+            let midY = (fromY + toY) / 2 + (toX - fromX) * 0.15
+            let mid = CGPoint(x: midX, y: midY)
 
             var path = Path()
             path.move(to: from)
             path.addQuadCurve(to: to, control: mid)
 
-            context.stroke(
-                path,
-                with: .linearGradient(
-                    Gradient(colors: [Color.cyan.opacity(opacity), Color.purple.opacity(opacity)]),
-                    startPoint: from, endPoint: to
-                ),
-                lineWidth: lineWidth
-            )
+            let opacity = synapse.strength * 0.5
+            let lw = 0.5 + synapse.strength * 1.5
+            let startColor = Color.cyan.opacity(opacity)
+            let endColor = Color.purple.opacity(opacity)
+            let grad = Gradient(colors: [startColor, endColor])
+            let shading = GraphicsContext.Shading.linearGradient(grad, startPoint: from, endPoint: to)
+            context.stroke(path, with: shading, lineWidth: lw)
         }
+    }
+
+    // MARK: - Draw Neurons
+
+    private func drawAllNeurons(_ context: inout GraphicsContext, _ size: CGSize, _ time: Double) {
+        for (index, neuron) in graph.neurons.enumerated() {
+            drawSingleNeuron(&context, size, time, neuron, index)
+        }
+    }
+
+    private func drawSingleNeuron(_ context: inout GraphicsContext, _ size: CGSize, _ time: Double, _ neuron: Neuron, _ index: Int) {
+        let cx = posX(neuron, size)
+        let cy = posY(neuron, size)
+        let baseSize = nodeRadius(neuron)
+        let isHovered = hoveredNeuronId == neuron.id
+        let isSelected = selectedNeuronId == neuron.id
+
+        let pulse = 1.0 + 0.06 * sin(time * (2.0 + Double(index % 7) * 0.3) + Double(index))
+        let effectiveSize = baseSize * CGFloat(pulse)
+
+        let glowColor = neuronColor(neuron, isHovered: isHovered, isSelected: isSelected)
+        let glowOpacity: Double = (isHovered || isSelected) ? 0.35 : 0.12
+
+        // Outer glow
+        let glowDiameter = effectiveSize * 2.5
+        let glowRect = CGRect(x: cx - glowDiameter / 2, y: cy - glowDiameter / 2, width: glowDiameter, height: glowDiameter)
+        let glowShading = Color(glowColor).opacity(glowOpacity)
+        context.fill(Path(ellipseIn: glowRect), with: .color(glowShading))
+
+        // Core
+        let coreRect = CGRect(x: cx - effectiveSize / 2, y: cy - effectiveSize / 2, width: effectiveSize, height: effectiveSize)
+        let coreShading = Color(glowColor).opacity(0.6)
+        context.fill(Path(ellipseIn: coreRect), with: .color(coreShading))
+
+        // Center dot
+        let dotSize = effectiveSize * 0.3
+        let dotRect = CGRect(x: cx - dotSize / 2, y: cy - dotSize / 2, width: dotSize, height: dotSize)
+        let dotColor = Color.white.opacity(0.8)
+        context.fill(Path(ellipseIn: dotRect), with: .color(dotColor))
+    }
+
+    // MARK: - Draw Hover Label
+
+    private func drawHoverLabel(_ context: inout GraphicsContext, _ size: CGSize) {
+        let targetId = hoveredNeuronId ?? selectedNeuronId
+        guard let targetId, let neuron = neuronMap[targetId] else { return }
+
+        let cx = posX(neuron, size)
+        let cy = posY(neuron, size)
+        let nSize = nodeRadius(neuron)
+        let label = neuron.filename.replacingOccurrences(of: ".md", with: "")
+
+        let styledText = Text(label).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+        let resolved = context.resolve(styledText)
+        let measureSize = resolved.measure(in: CGSize(width: 300, height: 50))
+
+        let hPad: CGFloat = 10
+        let vPad: CGFloat = 6
+        let bgX = cx - measureSize.width / 2 - hPad
+        let bgY = cy - nSize - 20 - measureSize.height / 2 - vPad
+        let bgW = measureSize.width + hPad * 2
+        let bgH = measureSize.height + vPad * 2
+        let bgRect = CGRect(x: bgX, y: bgY, width: bgW, height: bgH)
+        let bgPath = Path(roundedRect: bgRect, cornerRadius: 8)
+        let bgColor = Color.black.opacity(0.75)
+        context.fill(bgPath, with: .color(bgColor))
+
+        let textPoint = CGPoint(x: cx, y: cy - nSize - 20)
+        context.draw(resolved, at: textPoint)
+    }
+
+    // MARK: - Helpers
+
+    private func neuronColor(_ neuron: Neuron, isHovered: Bool, isSelected: Bool) -> Color {
+        if isSelected { return .cyan }
+        if isHovered { return .white }
+        let hue = 0.5 + (neuron.x + neuron.y) / 2 * 0.3
+        return Color(hue: hue, saturation: 0.8, brightness: 0.9)
+    }
+
+    private func nodeRadius(_ neuron: Neuron) -> CGFloat {
+        24 + CGFloat(min(neuron.chunkCount, 10)) * 3
+    }
+
+    private func posX(_ neuron: Neuron, _ size: CGSize) -> CGFloat {
+        let padding: CGFloat = 80
+        return padding + CGFloat(neuron.x) * (size.width - padding * 2)
+    }
+
+    private func posY(_ neuron: Neuron, _ size: CGSize) -> CGFloat {
+        let padding: CGFloat = 80
+        return padding + CGFloat(neuron.y) * (size.height - padding * 2)
     }
 }
 
@@ -140,134 +314,5 @@ struct BrainMapEmptyState: View {
                     .foregroundStyle(.white.opacity(0.3))
             }
         }
-    }
-}
-
-// MARK: - Neuron Node
-
-struct NeuronNode: View {
-    let neuron: Neuron
-    let isHovered: Bool
-    let isSelected: Bool
-    @State private var pulseScale: CGFloat = 1.0
-
-    private var nodeSize: CGFloat {
-        24 + CGFloat(min(neuron.chunkCount, 10)) * 3
-    }
-
-    private var glowColor: Color {
-        if isSelected { return .cyan }
-        if isHovered { return .white }
-        let hue = (neuron.x + neuron.y) / 2
-        return Color(hue: 0.5 + hue * 0.3, saturation: 0.8, brightness: 0.9)
-    }
-
-    var body: some View {
-        ZStack {
-            neuronGlow
-            neuronCore
-            neuronDot
-
-            if isHovered || isSelected {
-                neuronLabel
-            }
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: Double.random(in: 2...4)).repeatForever(autoreverses: true)) {
-                pulseScale = CGFloat.random(in: 1.03...1.12)
-            }
-        }
-        .animation(.easeOut(duration: 0.2), value: isHovered)
-        .animation(.easeOut(duration: 0.2), value: isSelected)
-    }
-
-    private var neuronGlow: some View {
-        Circle()
-            .fill(RadialGradient(
-                colors: [glowColor.opacity(isHovered || isSelected ? 0.4 : 0.15), .clear],
-                center: .center, startRadius: nodeSize * 0.3, endRadius: nodeSize * 1.5
-            ))
-            .frame(width: nodeSize * 3, height: nodeSize * 3)
-            .scaleEffect(pulseScale)
-    }
-
-    private var neuronCore: some View {
-        Circle()
-            .fill(RadialGradient(
-                colors: [glowColor.opacity(0.9), glowColor.opacity(0.3)],
-                center: .center, startRadius: 0, endRadius: nodeSize * 0.5
-            ))
-            .frame(width: nodeSize, height: nodeSize)
-    }
-
-    private var neuronDot: some View {
-        Circle()
-            .fill(Color.white.opacity(0.8))
-            .frame(width: nodeSize * 0.3, height: nodeSize * 0.3)
-    }
-
-    private var neuronLabel: some View {
-        VStack(spacing: 2) {
-            Text(neuron.filename.replacingOccurrences(of: ".md", with: ""))
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white)
-            if !neuron.preview.isEmpty {
-                Text(neuron.preview)
-                    .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .lineLimit(1)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.black.opacity(0.75))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .offset(y: -nodeSize - 16)
-    }
-}
-
-// MARK: - Ambient Particles
-
-struct AmbientParticles: View {
-    @State private var particles: [Particle] = (0..<30).map { _ in Particle.random() }
-
-    struct Particle: Identifiable {
-        let id = UUID()
-        var x: CGFloat
-        var y: CGFloat
-        var size: CGFloat
-        var opacity: Double
-        var targetX: CGFloat
-        var targetY: CGFloat
-
-        static func random() -> Particle {
-            Particle(
-                x: .random(in: 0...1), y: .random(in: 0...1),
-                size: .random(in: 1...3), opacity: .random(in: 0.05...0.2),
-                targetX: .random(in: 0...1), targetY: .random(in: 0...1)
-            )
-        }
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            ForEach(particles) { p in
-                Circle()
-                    .fill(Color.cyan.opacity(p.opacity))
-                    .frame(width: p.size, height: p.size)
-                    .position(x: p.x * geo.size.width, y: p.y * geo.size.height)
-            }
-        }
-        .onAppear {
-            withAnimation(.linear(duration: 20).repeatForever(autoreverses: true)) {
-                particles = particles.map { p in
-                    var new = p
-                    new.x = p.targetX
-                    new.y = p.targetY
-                    return new
-                }
-            }
-        }
-        .allowsHitTesting(false)
     }
 }

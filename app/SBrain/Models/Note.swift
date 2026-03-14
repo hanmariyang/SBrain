@@ -11,11 +11,12 @@ class FolderNode: Identifiable, ObservableObject {
     let preview: String   // first 3 lines for .md files
     let modifiedAt: Date?
 
-    var mdFileCount: Int {
+    var docFileCount: Int {
         if isFolder {
-            return children.reduce(0) { $0 + $1.mdFileCount }
+            return children.reduce(0) { $0 + $1.docFileCount }
         }
-        return name.hasSuffix(".md") ? 1 : 0
+        let ext = (name as NSString).pathExtension.lowercased()
+        return FolderScanner.supportedExtensions.contains(ext) ? 1 : 0
     }
 
     init(name: String, path: String, isFolder: Bool, children: [FolderNode] = [], preview: String = "", modifiedAt: Date? = nil) {
@@ -86,11 +87,19 @@ struct Neuron: Identifiable, Codable {
     let preview: String
     let x: Double
     let y: Double
+    let z: Double
     let chunkCount: Int
+    let projectTag: String
 
     enum CodingKeys: String, CodingKey {
-        case id, filename, preview, x, y
+        case id, filename, preview, x, y, z
         case chunkCount = "chunk_count"
+        case projectTag = "project_tag"
+    }
+
+    init(id: String, filename: String, preview: String, x: Double, y: Double, z: Double = 0.5, chunkCount: Int, projectTag: String = "") {
+        self.id = id; self.filename = filename; self.preview = preview
+        self.x = x; self.y = y; self.z = z; self.chunkCount = chunkCount; self.projectTag = projectTag
     }
 }
 

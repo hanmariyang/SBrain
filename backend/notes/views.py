@@ -14,7 +14,7 @@ from .serializers import (
     SearchResultSerializer,
 )
 from .graph import build_brain_graph
-from .search import vector_search
+from .search import search as do_search
 
 
 @api_view(["GET"])
@@ -72,7 +72,7 @@ def search(request):
     query = serializer.validated_data["query"]
     limit = serializer.validated_data["limit"]
 
-    results = vector_search(query, limit)
+    results = do_search(query, limit)
     result_serializer = SearchResultSerializer(results, many=True)
     return Response(result_serializer.data)
 

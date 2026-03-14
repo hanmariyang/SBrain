@@ -2,8 +2,11 @@ import Foundation
 
 struct FolderScanner {
 
+    /// Supported file extensions
+    static let supportedExtensions: Set<String> = ["md", "html", "htm"]
+
     /// Recursively scan a folder and build a tree of FolderNodes.
-    /// Only includes folders that contain .md files (directly or nested) and .md files themselves.
+    /// Includes folders that contain supported files (.md, .html, .htm) and those files themselves.
     static func scan(at path: String) -> FolderNode? {
         let fm = FileManager.default
         let url = URL(fileURLWithPath: path)
@@ -47,7 +50,7 @@ struct FolderScanner {
                 if let childFolder = buildNode(url: item, fm: fm) {
                     children.append(childFolder)
                 }
-            } else if itemName.hasSuffix(".md") {
+            } else if Self.isSupported(itemName) {
                 // Read preview (first 3 non-empty lines)
                 let preview = readPreview(at: item.path)
                 let modDate = (try? item.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
@@ -93,4 +96,24 @@ struct FolderScanner {
         guard let data = FileManager.default.contents(atPath: path) else { return nil }
         return String(data: data, encoding: .utf8)
     }
+
+    /// Check if a filename has a supported extension
+    private static func isSupported(_ filename: String) -> Bool {
+        let ext = (filename as NSString).pathExtension.lowercased()
+        return supportedExtensions.contains(ext)
+    }
+
+    /// Detect file type from path
+    static func fileType(for path: String) -> FileType {
+        let ext = (path as NSString).pathExtension.lowercased()
+        switch ext {
+        case "html", "htm": return .html
+        default: return .markdown
+        }
+    }
+}
+
+enum FileType {
+    case markdown
+    case html
 }

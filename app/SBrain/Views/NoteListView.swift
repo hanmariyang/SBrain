@@ -7,17 +7,57 @@ struct FolderTreeView: View {
 
     var body: some View {
         ScrollView {
-            if !noteStore.searchQuery.isEmpty && !noteStore.searchResults.isEmpty {
+            if noteStore.isSearchActive {
                 RecallResultList()
-            } else if let root = noteStore.rootFolder {
+            } else {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(root.children) { node in
-                        FolderNodeRow(node: node, depth: 0)
+                    ForEach(noteStore.visibleProjects) { project in
+                        if let root = project.rootFolder {
+                            // Project header
+                            ProjectSectionHeader(project: project)
+
+                            ForEach(root.children) { node in
+                                FolderNodeRow(node: node, depth: 1)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 4)
             }
         }
+    }
+}
+
+struct ProjectSectionHeader: View {
+    let project: ProjectFolder
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(projectColor)
+
+            Text(project.name)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white.opacity(0.8))
+
+            if let root = project.rootFolder {
+                Text("\(root.docFileCount)")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.2))
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.03))
+    }
+
+    private var projectColor: Color {
+        let hash = abs(project.path.hashValue)
+        let hue = Double(hash % 360) / 360.0
+        return Color(hue: hue, saturation: 0.6, brightness: 0.8)
     }
 }
 
@@ -49,7 +89,7 @@ struct FolderNodeRow: View {
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.white.opacity(0.7))
 
-                        Text("\(node.mdFileCount)")
+                        Text("\(node.docFileCount)")
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.2))
 
@@ -107,7 +147,7 @@ struct FileRow: View {
                     .padding(.top, 4)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(node.name.replacingOccurrences(of: ".md", with: ""))
+                    Text((node.name as NSString).deletingPathExtension)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(isSelected ? 1.0 : 0.8))
                         .lineLimit(1)
@@ -156,54 +196,91 @@ struct RecallResultList: View {
     @EnvironmentObject var noteStore: NoteStore
 
     var body: some View {
-        LazyVStack(spacing: 2) {
-            ForEach(noteStore.searchResults) { result in
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    .purple.opacity(result.score),
-                                    .purple.opacity(0.1),
-                                ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 6
-                            )
-                        )
-                        .frame(width: 10, height: 10)
-                        .shadow(color: .purple.opacity(result.score * 0.6), radius: 4)
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "sparkle.magnifyingglass")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.yellow.opacity(0.7))
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(result.filename.replacingOccurrences(of: ".md", with: ""))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(1)
+                Text("회상 결과")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.6))
 
-                        Text(result.chunkText)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.35))
-                            .lineLimit(2)
-                    }
+                Text("\(noteStore.filteredSearchResults.count)건")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.yellow.opacity(0.5))
 
-                    Spacer()
+                Spacer()
 
-                    Text("\(Int(result.score * 100))%")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.purple.opacity(0.7))
+                Button(action: { noteStore.clearSearch() }) {
+                    Text("닫기")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.3))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.white.opacity(0.03))
-                        .padding(.horizontal, 4)
-                )
-                .onTapGesture {
-                    noteStore.selectFile(path: result.path)
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.yellow.opacity(0.05))
+
+            // Results
+            LazyVStack(spacing: 2) {
+                ForEach(noteStore.filteredSearchResults) { result in
+                    let isSelected = noteStore.selectedFilePath == result.path
+                    HStack(spacing: 12) {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        .yellow.opacity(result.score),
+                                        .yellow.opacity(0.1),
+                                    ],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 6
+                                )
+                            )
+                            .frame(width: 10, height: 10)
+                            .shadow(color: .yellow.opacity(result.score * 0.6), radius: 4)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(resultFileName(result))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(isSelected ? 1.0 : 0.9))
+                                .lineLimit(1)
+
+                            Text(result.chunkText)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.35))
+                                .lineLimit(2)
+                        }
+
+                        Spacer()
+
+                        Text("\(Int(result.score * 100))%")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.yellow.opacity(0.7))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(isSelected ? Color.yellow.opacity(0.1) : Color.white.opacity(0.03))
+                            .padding(.horizontal, 4)
+                    )
+                    .onTapGesture {
+                        noteStore.selectFile(path: result.path)
+                    }
                 }
             }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+    }
+
+    private func resultFileName(_ result: SearchResult) -> String {
+        let name = (result.filename as NSString).deletingPathExtension
+        let ext = (result.filename as NSString).pathExtension.uppercased()
+        return "\(name)  \(ext)"
     }
 }

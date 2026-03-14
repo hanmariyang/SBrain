@@ -3,14 +3,29 @@ import WebKit
 
 struct MemoryDetailView: View {
     @EnvironmentObject var noteStore: NoteStore
+    @State private var isResultsCollapsed = false
+
+    private var searchTerms: [String] {
+        guard noteStore.isSearchActive else { return [] }
+        return noteStore.searchQuery
+            .lowercased()
+            .split(separator: " ")
+            .map(String.init)
+            .filter { $0.count >= 1 }
+    }
 
     var body: some View {
         ZStack {
             Color(nsColor: NSColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 1))
 
-            if let content = noteStore.selectedFileContent,
-               let fileName = noteStore.selectedFileName {
-                VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                // Search results strip (shown when search is active)
+                if noteStore.isSearchActive {
+                    RecallResultStrip(isCollapsed: $isResultsCollapsed)
+                }
+
+                if let content = noteStore.selectedFileContent,
+                   let fileName = noteStore.selectedFileName {
                     detailHeader(fileName: fileName)
 
                     // Gradient divider
@@ -24,10 +39,19 @@ struct MemoryDetailView: View {
                         )
                         .frame(height: 1)
 
-                    MarkdownWebView(markdown: content)
+                    // Render based on file type
+                    if let path = noteStore.selectedFilePath,
+                       FolderScanner.fileType(for: path) == .html {
+                        HTMLWebView(html: content, basePath: path, highlightTerms: searchTerms)
+                    } else {
+                        MarkdownWebView(markdown: content, highlightTerms: searchTerms)
+                    }
+                } else if noteStore.isSearchActive {
+                    // No file selected but search active: show full result list
+                    RecallResultListView()
+                } else {
+                    emptyState
                 }
-            } else {
-                emptyState
             }
         }
     }
@@ -35,7 +59,7 @@ struct MemoryDetailView: View {
     private func detailHeader(fileName: String) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(fileName.replacingOccurrences(of: ".md", with: ""))
+                Text((fileName as NSString).deletingPathExtension)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(
                         .linearGradient(
@@ -86,10 +110,220 @@ struct MemoryDetailView: View {
     }
 }
 
+// MARK: - Recall Result List (full area, shown when no file selected)
+
+struct RecallResultListView: View {
+    @EnvironmentObject var noteStore: NoteStore
+
+    private var results: [SearchResult] {
+        noteStore.filteredSearchResults
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 2) {
+                // Prompt
+                HStack {
+                    Image(systemName: "hand.point.up.left")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.yellow.opacity(0.5))
+                    Text("결과를 클릭하면 문서를 미리 볼 수 있습니다")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.3))
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+
+                ForEach(results, id: \.noteId) { result in
+                    resultRow(result)
+                }
+            }
+            .padding(.bottom, 20)
+        }
+    }
+
+    private func resultRow(_ result: SearchResult) -> some View {
+        let fileExt = (result.filename as NSString).pathExtension.uppercased()
+
+        return Button(action: {
+            noteStore.selectFile(path: result.path)
+        }) {
+            HStack(spacing: 12) {
+                // Score bar
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.white.opacity(0.06))
+                        .frame(width: 4, height: 32)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.yellow.opacity(0.6))
+                        .frame(width: 4, height: max(4, 32 * result.score))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(fileExt.isEmpty ? "MD" : fileExt)
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.yellow.opacity(0.8))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.yellow.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+
+                        Text((result.filename as NSString).deletingPathExtension)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Text("\(Int(result.score * 100))%")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.yellow.opacity(0.5))
+                    }
+
+                    if !result.chunkText.isEmpty {
+                        Text(result.chunkText)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.35))
+                            .lineLimit(2)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.02))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering {
+                NSCursor.pointingHand.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+    }
+}
+
+// MARK: - Recall Result Strip
+
+struct RecallResultStrip: View {
+    @EnvironmentObject var noteStore: NoteStore
+    @Binding var isCollapsed: Bool
+
+    private var results: [SearchResult] {
+        noteStore.filteredSearchResults
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header bar (always visible)
+            HStack(spacing: 8) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.yellow.opacity(0.8))
+
+                Text("회상 결과 \(results.count)건")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.yellow.opacity(0.9))
+
+                Spacer()
+
+                Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() } }) {
+                    Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .frame(width: 20, height: 20)
+                        .background(.white.opacity(0.06))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { noteStore.clearSearch() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .frame(width: 20, height: 20)
+                        .background(.white.opacity(0.06))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.yellow.opacity(0.06))
+
+            // Expanded: horizontal scrollable result chips
+            if !isCollapsed {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(results, id: \.noteId) { result in
+                            resultChip(result)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                .background(Color.yellow.opacity(0.03))
+            }
+
+            // Divider
+            Rectangle()
+                .fill(Color.yellow.opacity(0.15))
+                .frame(height: 1)
+        }
+    }
+
+    private func resultChip(_ result: SearchResult) -> some View {
+        let isSelected = noteStore.selectedFilePath == result.path
+        let fileExt = (result.filename as NSString).pathExtension.uppercased()
+
+        return Button(action: {
+            noteStore.selectFile(path: result.path)
+        }) {
+            HStack(spacing: 6) {
+                // File type badge
+                Text(fileExt.isEmpty ? "MD" : fileExt)
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(isSelected ? .black : .yellow.opacity(0.7))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(isSelected ? Color.yellow : Color.yellow.opacity(0.15))
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+
+                // Filename
+                Text((result.filename as NSString).deletingPathExtension)
+                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? .yellow : .white.opacity(0.7))
+                    .lineLimit(1)
+
+                // Score
+                Text("\(Int(result.score * 100))%")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isSelected ? Color.yellow.opacity(0.12) : Color.white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .strokeBorder(isSelected ? Color.yellow.opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Markdown WebView (WKWebView-based renderer)
 
 struct MarkdownWebView: NSViewRepresentable {
     let markdown: String
+    var highlightTerms: [String] = []
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -103,7 +337,8 @@ struct MarkdownWebView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         let escaped = escapeForJS(markdown)
-        let html = Self.buildHTML(markdownContent: escaped)
+        let termsJSON = escapeForJS(highlightTerms.map { "\"\($0)\"" }.joined(separator: ","))
+        let html = Self.buildHTML(markdownContent: escaped, highlightTermsJSON: "[\(termsJSON)]")
         webView.loadHTMLString(html, baseURL: nil)
     }
 
@@ -127,7 +362,7 @@ struct MarkdownWebView: NSViewRepresentable {
            .replacingOccurrences(of: "$", with: "\\$")
     }
 
-    private static func buildHTML(markdownContent: String) -> String {
+    private static func buildHTML(markdownContent: String, highlightTermsJSON: String = "[]") -> String {
         """
         <!DOCTYPE html>
         <html>
@@ -136,6 +371,7 @@ struct MarkdownWebView: NSViewRepresentable {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
         \(Self.cssStyles)
+        \(Self.highlightCSS)
         </style>
         </head>
         <body>
@@ -146,10 +382,12 @@ struct MarkdownWebView: NSViewRepresentable {
         <script>
         const md = `\(markdownContent)`;
         document.getElementById('content').innerHTML = marked.parse(md);
-        // Syntax highlighting for code blocks
         document.querySelectorAll('pre code').forEach(el => {
             el.classList.add('hljs');
         });
+        \(Self.highlightJS)
+        var _hlTerms = \(highlightTermsJSON);
+        if (_hlTerms.length > 0) { highlightTerms(_hlTerms); }
         </script>
         </body>
         </html>
@@ -392,4 +630,123 @@ struct MarkdownWebView: NSViewRepresentable {
     };
     function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
     """
+
+    static let highlightCSS = """
+    .search-highlight {
+        background: rgba(255, 220, 50, 0.35);
+        color: #ffe066;
+        border-radius: 2px;
+        padding: 0 1px;
+        box-shadow: 0 0 6px rgba(255, 220, 50, 0.2);
+    }
+    .search-highlight-first {
+        background: rgba(255, 180, 0, 0.5);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255, 180, 0, 0.3);
+    }
+    """
+
+    static let highlightJS = """
+    function highlightTerms(terms) {
+        if (!terms || terms.length === 0) return;
+        var content = document.getElementById('content');
+        if (!content) return;
+        // Walk text nodes, skip code blocks
+        var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+            acceptNode: function(node) {
+                var p = node.parentElement;
+                if (p && (p.tagName === 'CODE' || p.tagName === 'PRE' || p.classList.contains('search-highlight'))) return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        var nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        // Build regex from terms (case-insensitive)
+        var escaped = terms.map(function(t) { return t.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'); });
+        var re = new RegExp('(' + escaped.join('|') + ')', 'gi');
+        var isFirst = true;
+        nodes.forEach(function(textNode) {
+            var text = textNode.nodeValue;
+            if (!re.test(text)) return;
+            re.lastIndex = 0;
+            var frag = document.createDocumentFragment();
+            var lastIdx = 0;
+            var match;
+            while ((match = re.exec(text)) !== null) {
+                if (match.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, match.index)));
+                var span = document.createElement('span');
+                span.className = 'search-highlight' + (isFirst ? ' search-highlight-first' : '');
+                span.textContent = match[0];
+                if (isFirst) { span.id = '_hl_first'; isFirst = false; }
+                frag.appendChild(span);
+                lastIdx = re.lastIndex;
+            }
+            if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+            textNode.parentNode.replaceChild(frag, textNode);
+        });
+        // Scroll to first match
+        var first = document.getElementById('_hl_first');
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    """
+}
+
+// MARK: - HTML WebView (direct HTML rendering)
+
+struct HTMLWebView: NSViewRepresentable {
+    let html: String
+    let basePath: String
+    var highlightTerms: [String] = []
+
+    func makeNSView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.preferences.setValue(true, forKey: "developerExtrasEnabled")
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.setValue(false, forKey: "drawsBackground")
+        webView.navigationDelegate = context.coordinator
+        return webView
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {
+        let baseURL = URL(fileURLWithPath: basePath).deletingLastPathComponent()
+
+        if highlightTerms.isEmpty {
+            webView.loadHTMLString(html, baseURL: baseURL)
+        } else {
+            // Inject highlight CSS + JS into the HTML
+            let termsJSON = "[" + highlightTerms.map { "\"\($0.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\""))\"" }.joined(separator: ",") + "]"
+            let injection = """
+            <style>\(MarkdownWebView.highlightCSS)</style>
+            <script>\(MarkdownWebView.highlightJS)
+            window.addEventListener('load', function() { highlightTerms(\(termsJSON)); });
+            </script>
+            """
+            let injectedHTML: String
+            if html.lowercased().contains("</body>") {
+                injectedHTML = html.replacingOccurrences(of: "</body>", with: "\(injection)</body>", options: .caseInsensitive, range: html.range(of: "</body>", options: .caseInsensitive))
+            } else {
+                injectedHTML = html + injection
+            }
+            webView.loadHTMLString(injectedHTML, baseURL: baseURL)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    class Coordinator: NSObject, WKNavigationDelegate {
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if navigationAction.navigationType == .linkActivated,
+               let url = navigationAction.request.url {
+                if url.isFileURL {
+                    decisionHandler(.allow)
+                } else {
+                    NSWorkspace.shared.open(url)
+                    decisionHandler(.cancel)
+                }
+            } else {
+                decisionHandler(.allow)
+            }
+        }
+    }
 }

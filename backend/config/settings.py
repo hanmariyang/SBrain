@@ -58,5 +58,6 @@ REST_FRAMEWORK = {
 
 # Embedding settings
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")  # Separate key for Voyage AI embeddings
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "voyage-3")
 EMBEDDING_DIMENSION = 1024  # voyage-3 dimension

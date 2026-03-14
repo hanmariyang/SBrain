@@ -26,7 +26,7 @@ struct ContentView: View {
 
     var body: some View {
         HSplitView {
-            // Left: Folder tree sidebar
+            // Left: Projects + content
             VStack(spacing: 0) {
                 TopBar(viewMode: $viewMode)
 
@@ -34,7 +34,10 @@ struct ContentView: View {
                     MemorizeProgressView(status: status)
                 }
 
-                if noteStore.rootFolder != nil {
+                if noteStore.hasProjects {
+                    // Project tabs
+                    ProjectTabBar()
+
                     switch viewMode {
                     case .list:
                         FolderTreeView()
@@ -42,7 +45,6 @@ struct ContentView: View {
                         BrainMapView()
                     }
                 } else {
-                    // No folder selected
                     emptyState
                 }
             }
@@ -56,9 +58,8 @@ struct ContentView: View {
         .frame(minWidth: 900, minHeight: 550)
         .preferredColorScheme(.dark)
         .task {
-            // Wait for backend, then restore last folder
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            noteStore.restoreLastFolder()
+            noteStore.restoreProjects()
         }
     }
 
@@ -77,17 +78,17 @@ struct ContentView: View {
                 )
                 .opacity(0.4)
 
-            Text("폴더를 선택하세요")
+            Text("프로젝트를 추가하세요")
                 .font(.title3)
                 .foregroundStyle(.white.opacity(0.5))
 
-            Text("마크다운 파일이 있는 폴더를 지정하면\n폴더 구조 그대로 모든 .md 파일을 보여줍니다")
+            Text("여러 프로젝트 폴더를 추가하면\n하나의 Brain Map에서 통합 탐색할 수 있습니다")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.3))
                 .multilineTextAlignment(.center)
 
-            Button(action: { noteStore.selectFolder() }) {
-                Label("폴더 열기", systemImage: "folder")
+            Button(action: { noteStore.addFolder() }) {
+                Label("프로젝트 추가", systemImage: "folder.badge.plus")
                     .padding(.horizontal, 20)
                     .padding(.vertical, 10)
                     .background(
@@ -104,6 +105,131 @@ struct ContentView: View {
 
             Spacer()
         }
+    }
+}
+
+// MARK: - Project Tab Bar
+
+struct ProjectTabBar: View {
+    @EnvironmentObject var noteStore: NoteStore
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                // "All" tab
+                AllProjectsTab()
+
+                ForEach(Array(noteStore.projects.enumerated()), id: \.element.id) { index, project in
+                    ProjectTab(project: project, isActive: noteStore.selectedProjectId == project.id, onTap: {
+                        noteStore.selectProject(project.id)
+                    }, onRemove: {
+                        noteStore.removeProject(at: index)
+                    })
+                }
+
+                // Add project button
+                Button(action: { noteStore.addFolder() }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .frame(width: 24, height: 24)
+                        .background(.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                .help("프로젝트 추가")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .background(Color.black.opacity(0.2))
+    }
+}
+
+struct AllProjectsTab: View {
+    @EnvironmentObject var noteStore: NoteStore
+
+    private var isActive: Bool { noteStore.selectedProjectId == nil }
+
+    var body: some View {
+        Button(action: { noteStore.selectProject(nil) }) {
+            HStack(spacing: 6) {
+                Image(systemName: "brain")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.cyan.opacity(0.7))
+
+                Text("All")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(isActive ? 0.9 : 0.5))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Color.cyan.opacity(0.15) : .white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(isActive ? Color.cyan.opacity(0.4) : .clear, lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct ProjectTab: View {
+    let project: ProjectFolder
+    let isActive: Bool
+    let onTap: () -> Void
+    let onRemove: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(projectColor)
+                    .frame(width: 6, height: 6)
+
+                Text(project.name)
+                    .font(.system(size: 11, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(.white.opacity(isActive ? 0.95 : 0.7))
+                    .lineLimit(1)
+
+                if let root = project.rootFolder {
+                    Text("\(root.docFileCount)")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.25))
+                }
+
+                if isHovered {
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.3))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? projectColor.opacity(0.15) : .white.opacity(isHovered ? 0.08 : 0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(isActive ? projectColor.opacity(0.5) : projectColor.opacity(0.3), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+
+    private var projectColor: Color {
+        let hash = abs(project.path.hashValue)
+        let hue = Double(hash % 360) / 360.0
+        return Color(hue: hue, saturation: 0.6, brightness: 0.8)
     }
 }
 
@@ -133,15 +259,14 @@ struct TopBar: View {
                     )
             }
 
-            if let root = noteStore.rootFolder {
-                Text("\(root.mdFileCount) files")
+            if noteStore.hasProjects {
+                Text("\(noteStore.projects.count) projects · \(noteStore.totalDocCount) files")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.3))
             }
 
             Spacer()
 
-            // Recall (search)
             RecallBar()
 
             Spacer()
@@ -169,8 +294,8 @@ struct TopBar: View {
             .background(.white.opacity(0.05))
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Folder button
-            Button(action: { noteStore.selectFolder() }) {
+            // Add folder button
+            Button(action: { noteStore.addFolder() }) {
                 Image(systemName: "folder.badge.plus")
                     .font(.system(size: 12))
                     .padding(6)
@@ -179,7 +304,7 @@ struct TopBar: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.white.opacity(0.6))
-            .help("폴더 변경")
+            .help("프로젝트 추가")
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -193,42 +318,58 @@ struct RecallBar: View {
     @EnvironmentObject var noteStore: NoteStore
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkle.magnifyingglass")
-                .foregroundStyle(.cyan.opacity(0.6))
-                .font(.system(size: 12))
+        VStack(spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkle.magnifyingglass")
+                    .foregroundStyle(noteStore.isSearchActive ? .yellow.opacity(0.8) : .cyan.opacity(0.6))
+                    .font(.system(size: 12))
 
-            TextField("회상하기...", text: $noteStore.searchQuery)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .foregroundStyle(.white)
-                .onSubmit {
-                    Task { await noteStore.recall() }
+                TextField("회상하기...", text: $noteStore.searchQuery)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white)
+                    .onSubmit {
+                        Task { await noteStore.recall() }
+                    }
+
+                if noteStore.isSearchActive {
+                    Text("\(noteStore.filteredSearchResults.count)")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.yellow)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.yellow.opacity(0.15))
+                        .clipShape(Capsule())
                 }
 
-            if !noteStore.searchQuery.isEmpty {
-                Button(action: {
-                    noteStore.searchQuery = ""
-                    noteStore.searchResults = []
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.white.opacity(0.3))
-                        .font(.system(size: 10))
+                if !noteStore.searchQuery.isEmpty {
+                    Button(action: { noteStore.clearSearch() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.white.opacity(0.3))
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+
+                if noteStore.isSearching {
+                    ProgressView()
+                        .scaleEffect(0.5)
+                        .tint(.cyan)
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(noteStore.isSearchActive ? Color.yellow.opacity(0.06) : .white.opacity(0.06))
+            .clipShape(Capsule())
 
-            if noteStore.isSearching {
-                ProgressView()
-                    .scaleEffect(0.5)
-                    .tint(.cyan)
+            // Error / empty result message
+            if let error = noteStore.searchError, !noteStore.isSearching {
+                Text(error)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.4))
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(.white.opacity(0.06))
-        .clipShape(Capsule())
-        .frame(maxWidth: 300)
+        .frame(maxWidth: 320)
     }
 }
 

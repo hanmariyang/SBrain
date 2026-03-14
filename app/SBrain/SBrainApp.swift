@@ -18,15 +18,10 @@ struct SBrainApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("폴더 열기...") {
-                    noteStore.selectFolder()
+                Button("프로젝트 추가...") {
+                    noteStore.addFolder()
                 }
                 .keyboardShortcut("o", modifiers: .command)
-
-                Button("폴더 새로고침") {
-                    noteStore.scanFolder()
-                }
-                .keyboardShortcut("r", modifiers: .command)
             }
         }
     }

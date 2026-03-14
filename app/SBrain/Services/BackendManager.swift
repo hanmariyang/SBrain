@@ -58,30 +58,49 @@ class BackendManager: ObservableObject {
         // Look for backend/ relative to the app bundle or working directory
         let candidates = [
             Bundle.main.bundlePath + "/../../../../../backend",
+            Bundle.main.bundlePath + "/../../../../../../backend",
             FileManager.default.currentDirectoryPath + "/backend",
-            NSHomeDirectory() + "/Desktop/dev/hanmari/SBrain/backend",
+            FileManager.default.currentDirectoryPath + "/../backend",
+            NSHomeDirectory() + "/Desktop/Deploy/ss/SBrain/backend",
         ]
         for path in candidates {
             let resolved = (path as NSString).standardizingPath
             if FileManager.default.fileExists(atPath: resolved + "/manage.py") {
+                print("[BackendManager] Found backend at: \(resolved)")
                 return resolved
             }
         }
+        print("[BackendManager] Backend not found in candidates: \(candidates)")
         return candidates.last!
     }
 
     private func findVenvPython() -> String {
         let candidates = [
             Bundle.main.bundlePath + "/../../../../../venv/bin/python",
+            Bundle.main.bundlePath + "/../../../../../../venv/bin/python",
             FileManager.default.currentDirectoryPath + "/venv/bin/python",
-            NSHomeDirectory() + "/Desktop/dev/hanmari/SBrain/venv/bin/python",
+            FileManager.default.currentDirectoryPath + "/../venv/bin/python",
+            NSHomeDirectory() + "/Desktop/Deploy/ss/SBrain/venv/bin/python",
         ]
         for path in candidates {
             let resolved = (path as NSString).standardizingPath
             if FileManager.default.fileExists(atPath: resolved) {
+                print("[BackendManager] Found venv Python at: \(resolved)")
                 return resolved
             }
         }
-        return "/opt/homebrew/bin/python3.11"
+        // Fallback to system Python
+        let systemPythons = [
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
+        ]
+        for path in systemPythons {
+            if FileManager.default.fileExists(atPath: path) {
+                print("[BackendManager] Using system Python: \(path)")
+                return path
+            }
+        }
+        return "/usr/bin/python3"
     }
 }

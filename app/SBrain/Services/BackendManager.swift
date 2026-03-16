@@ -8,7 +8,10 @@ class BackendManager: ObservableObject {
     private var healthTimer: Timer?
 
     func start() {
-        // Check if Docker backend is already running on 8765
+        // Kill any stale local Django from a previous app session
+        killStaleProcessOnPort()
+
+        // Check Docker backend — try both IPv4 and IPv6
         checkDockerBackend { [weak self] dockerRunning in
             DispatchQueue.main.async {
                 if dockerRunning {
@@ -17,23 +20,84 @@ class BackendManager: ObservableObject {
                     print("[BackendManager] Docker backend detected on :8765")
                     self?.startHealthCheck()
                 } else {
+                    print("[BackendManager] Docker not found, starting local Django")
                     self?.startLocalProcess()
                 }
             }
         }
     }
 
-    private func checkDockerBackend(completion: @escaping (Bool) -> Void) {
-        guard let url = URL(string: "http://127.0.0.1:8765/api/status/") else {
-            completion(false)
-            return
+    /// Kill any Python process listening on port 8765 that we didn't start
+    private func killStaleProcessOnPort() {
+        // Kill our own tracked process
+        if let proc = process, proc.isRunning {
+            proc.terminate()
+            process = nil
+            print("[BackendManager] Killed tracked local process")
         }
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 2
-        URLSession.shared.dataTask(with: request) { _, response, _ in
-            let ok = (response as? HTTPURLResponse)?.statusCode == 200
-            completion(ok)
-        }.resume()
+
+        // Also kill any orphaned Python process on 8765 (from previous app session)
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/usr/bin/lsof")
+        task.arguments = ["-ti", ":8765", "-sTCP:LISTEN"]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+
+        do {
+            try task.run()
+            task.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            for pidStr in output.components(separatedBy: "\n") {
+                if let pid = Int32(pidStr.trimmingCharacters(in: .whitespaces)), pid > 0 {
+                    // Only kill Python processes (not Docker)
+                    let checkTask = Process()
+                    checkTask.executableURL = URL(fileURLWithPath: "/bin/ps")
+                    checkTask.arguments = ["-p", "\(pid)", "-o", "comm="]
+                    let checkPipe = Pipe()
+                    checkTask.standardOutput = checkPipe
+                    checkTask.standardError = FileHandle.nullDevice
+                    try checkTask.run()
+                    checkTask.waitUntilExit()
+                    let comm = String(data: checkPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    if comm.lowercased().contains("python") {
+                        kill(pid, SIGTERM)
+                        print("[BackendManager] Killed orphaned Python process \(pid) on :8765")
+                    }
+                }
+            }
+        } catch {
+            // Ignore — no stale process
+        }
+    }
+
+    private func checkDockerBackend(completion: @escaping (Bool) -> Void) {
+        // Try localhost (may resolve IPv6 first on macOS) to detect Docker
+        let urls = [
+            "http://localhost:8765/api/status/",
+            "http://127.0.0.1:8765/api/status/",
+        ]
+
+        let group = DispatchGroup()
+        var found = false
+
+        for urlStr in urls {
+            guard let url = URL(string: urlStr) else { continue }
+            group.enter()
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 3
+            URLSession.shared.dataTask(with: request) { _, response, _ in
+                if (response as? HTTPURLResponse)?.statusCode == 200 {
+                    found = true
+                }
+                group.leave()
+            }.resume()
+        }
+
+        group.notify(queue: .main) {
+            completion(found)
+        }
     }
 
     private func startHealthCheck() {

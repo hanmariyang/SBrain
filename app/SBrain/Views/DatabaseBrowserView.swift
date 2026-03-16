@@ -126,30 +126,6 @@ private struct DBTableListView: View {
 
                 Spacer()
 
-                // Local mirror badge
-                if dbStore.hasLocalMirror {
-                    Text("로컬")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.green)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(Color.green.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
-                }
-
-                // Download / Sync button
-                if dbStore.isDownloading {
-                    ProgressView().scaleEffect(0.5).tint(.green)
-                } else {
-                    Button(action: { Task { await dbStore.syncDB() } }) {
-                        Image(systemName: dbStore.hasLocalMirror ? "arrow.triangle.2.circlepath" : "arrow.down.circle")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.green.opacity(0.6))
-                    }
-                    .buttonStyle(.plain)
-                    .help(dbStore.hasLocalMirror ? "동기화 (서버에서 최신 데이터 다운로드)" : "로컬에 다운로드")
-                }
-
                 Button(action: { dbStore.disconnect() }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 11))
@@ -196,46 +172,6 @@ private struct DBTableListView: View {
             }
 
             Divider().background(.white.opacity(0.1))
-
-            // Download progress
-            if dbStore.isDownloading, let status = dbStore.downloadStatus {
-                HStack(spacing: 8) {
-                    ProgressView().scaleEffect(0.6).tint(.green)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(status.phase)
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.green.opacity(0.8))
-                        Text(status.progress)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
-                    Spacer()
-                    if let elapsed = status.elapsed {
-                        Text("\(elapsed)s")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.2))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.green.opacity(0.06))
-            }
-
-            // Download error
-            if let status = dbStore.downloadStatus, status.phase == "error", let error = status.error {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.red.opacity(0.7))
-                    Text(error)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.red.opacity(0.6))
-                        .lineLimit(2)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.red.opacity(0.06))
-            }
 
             // Table list
             ScrollView {
@@ -584,9 +520,9 @@ struct DBDetailView: View {
     // MARK: - Data Table
 
     private func dataTable(_ response: DBRowsResponse) -> some View {
-        ScrollView([.horizontal, .vertical]) {
+        ScrollView(.horizontal, showsIndicators: true) {
             VStack(spacing: 0) {
-                // Column headers
+                // Column headers (pinned — outside vertical scroll)
                 HStack(spacing: 0) {
                     Text("#")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -608,31 +544,35 @@ struct DBDetailView: View {
 
                 Divider().background(.green.opacity(0.3))
 
-                // Data rows
-                ForEach(Array(response.rows.enumerated()), id: \.offset) { rowIdx, row in
-                    let isRowSelected = dbStore.selectedRowIndex == rowIdx
-                    HStack(spacing: 0) {
-                        Text("\(response.offset + rowIdx + 1)")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.2))
-                            .frame(width: 40, alignment: .center)
-                            .padding(.vertical, 5)
+                // Data rows (vertically scrollable)
+                ScrollView(.vertical, showsIndicators: true) {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(response.rows.enumerated()), id: \.offset) { rowIdx, row in
+                            let isRowSelected = dbStore.selectedRowIndex == rowIdx
+                            HStack(spacing: 0) {
+                                Text("\(response.offset + rowIdx + 1)")
+                                    .font(.system(size: 9, design: .monospaced))
+                                    .foregroundStyle(.white.opacity(0.2))
+                                    .frame(width: 40, alignment: .center)
+                                    .padding(.vertical, 5)
 
-                        ForEach(Array(row.enumerated()), id: \.offset) { _, value in
-                            Text(value.description)
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundStyle(cellColor(value))
-                                .lineLimit(1)
-                                .frame(minWidth: 100, maxWidth: 200, alignment: .leading)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 5)
+                                ForEach(Array(row.enumerated()), id: \.offset) { _, value in
+                                    Text(value.description)
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(cellColor(value))
+                                        .lineLimit(1)
+                                        .frame(minWidth: 100, maxWidth: 200, alignment: .leading)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 5)
+                                }
+                            }
+                            .background(isRowSelected ? Color.green.opacity(0.15) : (rowIdx % 2 == 0 ? Color.clear : Color.white.opacity(0.015)))
+                            .overlay(isRowSelected ? RoundedRectangle(cornerRadius: 0).stroke(Color.green.opacity(0.4), lineWidth: 1) : nil)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                dbStore.selectRow(isRowSelected ? nil : rowIdx)
+                            }
                         }
-                    }
-                    .background(isRowSelected ? Color.green.opacity(0.15) : (rowIdx % 2 == 0 ? Color.clear : Color.white.opacity(0.015)))
-                    .overlay(isRowSelected ? RoundedRectangle(cornerRadius: 0).stroke(Color.green.opacity(0.4), lineWidth: 1) : nil)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        dbStore.selectRow(isRowSelected ? nil : rowIdx)
                     }
                 }
             }

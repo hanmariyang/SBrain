@@ -17,8 +17,4 @@ urlpatterns = [
     path("db/rows/", views.db_rows, name="db-rows"),
     path("db/search/", views.db_search, name="db-search"),
     path("db/graph/", views.db_graph, name="db-graph"),
-    # DB mirror (download/sync)
-    path("db/download/", views.db_download, name="db-download"),
-    path("db/download/status/", views.db_download_status, name="db-download-status"),
-    path("db/mirror/delete/", views.db_delete_mirror, name="db-mirror-delete"),
 ]

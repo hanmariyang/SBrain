@@ -1,33 +1,43 @@
 """
 PostgreSQL read-only database browser.
-If a local mirror exists (via db_mirror), queries go to the local copy.
-Otherwise, queries go directly to the remote DB (read-only).
+Connects directly to the target database (read-only).
 """
 
 import math
+import os
+from urllib.parse import urlparse, urlunparse
 
 import psycopg2
 import psycopg2.extras
 from psycopg2 import sql
 
-from . import db_mirror
+
+def _is_docker() -> bool:
+    return os.path.exists("/.dockerenv")
 
 
-def _resolve_url(remote_url: str) -> tuple[str, bool]:
-    """Return (url_to_query, is_local). Prefer local mirror if available."""
-    local = db_mirror.get_local_url(remote_url)
-    if local:
-        return local, True
-    return remote_url, False
+def _rewrite_url_for_docker(url: str) -> str:
+    """Inside Docker, rewrite localhost URLs to host.docker.internal."""
+    if not _is_docker():
+        return url
+    parsed = urlparse(url)
+    if parsed.hostname not in ("localhost", "127.0.0.1"):
+        return url
+    replaced = parsed._replace(
+        netloc=parsed.netloc.replace(parsed.hostname, "host.docker.internal", 1)
+    )
+    return urlunparse(replaced)
 
 
-def _connect(connection_url: str, readonly: bool = True):
-    """Open a connection. Read-only for remote, normal for local mirror."""
+def _resolve_url(remote_url: str) -> str:
+    """Return the effective URL to query."""
+    return _rewrite_url_for_docker(remote_url)
+
+
+def _connect(connection_url: str):
+    """Open a read-only connection."""
     conn = psycopg2.connect(connection_url)
-    if readonly:
-        conn.set_session(readonly=True, autocommit=True)
-    else:
-        conn.set_session(autocommit=True)
+    conn.set_session(readonly=True, autocommit=True)
     with conn.cursor() as cur:
         cur.execute("SET statement_timeout = '10s';")
     return conn
@@ -37,34 +47,31 @@ def _connect(connection_url: str, readonly: bool = True):
 
 def test_connection(connection_url: str) -> dict:
     try:
-        conn = _connect(connection_url)
+        effective_url = _rewrite_url_for_docker(connection_url)
+        conn = _connect(effective_url)
         with conn.cursor() as cur:
             cur.execute("SELECT version(), current_database();")
             row = cur.fetchone()
         conn.close()
-
-        # Check if local mirror exists
-        local_url = db_mirror.get_local_url(connection_url)
 
         return {
             "ok": True,
             "server_version": row[0],
             "database": row[1],
             "error": None,
-            "has_local_mirror": local_url is not None,
         }
     except Exception as e:
         return {
             "ok": False, "server_version": None, "database": None,
-            "error": str(e), "has_local_mirror": False,
+            "error": str(e),
         }
 
 
 # ── Schema list ──────────────────────────────────────────────
 
 def list_schemas(connection_url: str) -> list[dict]:
-    url, is_local = _resolve_url(connection_url)
-    conn = _connect(url, readonly=not is_local)
+    url = _resolve_url(connection_url)
+    conn = _connect(url)
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT s.schema_name AS name,
@@ -86,8 +93,8 @@ def list_schemas(connection_url: str) -> list[dict]:
 # ── Table list ───────────────────────────────────────────────
 
 def list_tables(connection_url: str, schema: str = "public") -> list[dict]:
-    url, is_local = _resolve_url(connection_url)
-    conn = _connect(url, readonly=not is_local)
+    url = _resolve_url(connection_url)
+    conn = _connect(url)
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT t.table_name AS name,
@@ -115,8 +122,8 @@ def list_tables(connection_url: str, schema: str = "public") -> list[dict]:
 # ── Column list ──────────────────────────────────────────────
 
 def list_columns(connection_url: str, schema: str, table: str) -> list[dict]:
-    url, is_local = _resolve_url(connection_url)
-    conn = _connect(url, readonly=not is_local)
+    url = _resolve_url(connection_url)
+    conn = _connect(url)
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT column_name AS name,
@@ -144,8 +151,8 @@ def fetch_rows(connection_url: str, schema: str, table: str,
     limit = max(1, min(limit, MAX_LIMIT))
     offset = max(0, offset)
 
-    url, is_local = _resolve_url(connection_url)
-    conn = _connect(url, readonly=not is_local)
+    url = _resolve_url(connection_url)
+    conn = _connect(url)
     ident = sql.SQL("{}.{}").format(sql.Identifier(schema), sql.Identifier(table))
 
     with conn.cursor() as cur:
@@ -185,7 +192,7 @@ def fetch_rows(connection_url: str, schema: str, table: str,
         "total_estimate": max(0, total_estimate),
         "limit": limit,
         "offset": offset,
-        "is_local": is_local,
+        "is_local": False,
     }
 
 
@@ -202,8 +209,8 @@ def _to_json(value):
 # ── Brain Graph for DB tables ────────────────────────────────
 
 def build_db_graph(connection_url: str) -> dict:
-    url, is_local = _resolve_url(connection_url)
-    conn = _connect(url, readonly=not is_local)
+    url = _resolve_url(connection_url)
+    conn = _connect(url)
     database = ""
     with conn.cursor() as cur:
         cur.execute("SELECT current_database();")
@@ -331,7 +338,7 @@ def build_db_graph(connection_url: str) -> dict:
 # ── Search (always queries current source — local or remote) ─
 
 def search_db(connection_url: str, query: str, limit: int = 50) -> list[dict]:
-    url, _ = _resolve_url(connection_url)
+    url = _resolve_url(connection_url)
     conn = _connect(url, readonly=True)
     results = []
 

@@ -16,7 +16,6 @@ from .serializers import (
 from .graph import build_brain_graph
 from .search import search as do_search
 from . import db_browser
-from . import db_mirror
 
 
 @api_view(["GET"])
@@ -167,36 +166,3 @@ def db_graph(request):
         return Response(db_browser.build_db_graph(url))
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# ── DB Mirror (Download / Sync) ──────────────────────────────
-
-@api_view(["POST"])
-def db_download(request):
-    """Start downloading remote DB to local mirror."""
-    url = request.data.get("connection_url", "")
-    if not url:
-        return Response({"error": "connection_url required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    current = db_mirror.get_status()
-    if current["running"]:
-        return Response({"error": "다운로드가 이미 진행 중입니다"}, status=status.HTTP_409_CONFLICT)
-
-    db_mirror.start_download(url)
-    return Response({"ok": True, "detail": "다운로드 시작"})
-
-
-@api_view(["GET"])
-def db_download_status(request):
-    """Check download progress."""
-    return Response(db_mirror.get_status())
-
-
-@api_view(["POST"])
-def db_delete_mirror(request):
-    """Delete the local mirror."""
-    url = request.data.get("connection_url", "")
-    if not url:
-        return Response({"error": "connection_url required"}, status=status.HTTP_400_BAD_REQUEST)
-    db_mirror.delete_mirror(url)
-    return Response({"ok": True})

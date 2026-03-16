@@ -33,16 +33,15 @@ class DatabaseStore: ObservableObject {
     // Brain Map
     @Published var dbBrainGraph: BrainGraph?
 
-    // Download / Mirror
-    @Published var hasLocalMirror = false
-    @Published var downloadStatus: DBDownloadStatus?
-    @Published var isDownloading = false
-
     private let api = APIClient.shared
-    private var downloadPollTimer: Timer?
+    private let savedURLKey = "SBrain.dbConnectionURL"
 
     var isConnected: Bool { connectionInfo?.ok == true }
     var databaseName: String { connectionInfo?.database ?? "" }
+
+    init() {
+        connectionURL = UserDefaults.standard.string(forKey: savedURLKey) ?? ""
+    }
 
     var totalPages: Int {
         guard let r = rows, r.totalEstimate > 0 else { return 1 }
@@ -64,7 +63,7 @@ class DatabaseStore: ObservableObject {
             connectionInfo = info
             if info.ok {
                 connectionError = nil
-                hasLocalMirror = info.hasLocalMirror ?? false
+                UserDefaults.standard.set(url, forKey: savedURLKey)
                 await loadSchemas()
                 await loadDBGraph()
             } else {
@@ -86,68 +85,6 @@ class DatabaseStore: ObservableObject {
         dbBrainGraph = nil
         currentPage = 0
         connectionError = nil
-        hasLocalMirror = false
-        stopDownloadPoll()
-    }
-
-    // MARK: - Download (Mirror)
-
-    func startDownload() async {
-        guard isConnected else { return }
-        do {
-            try await api.dbDownload(connectionURL: connectionURL)
-            isDownloading = true
-            startDownloadPoll()
-        } catch {
-            connectionError = "다운로드 시작 실패: \(error.localizedDescription)"
-        }
-    }
-
-    func syncDB() async {
-        // Re-download = same as download (overwrites existing mirror)
-        await startDownload()
-    }
-
-    private func startDownloadPoll() {
-        stopDownloadPoll()
-        downloadPollTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.pollDownloadStatus()
-            }
-        }
-    }
-
-    private func stopDownloadPoll() {
-        downloadPollTimer?.invalidate()
-        downloadPollTimer = nil
-    }
-
-    private func pollDownloadStatus() async {
-        do {
-            let status = try await api.dbDownloadStatus()
-            downloadStatus = status
-            isDownloading = status.running
-
-            if !status.running {
-                stopDownloadPoll()
-                if status.phase == "done" {
-                    hasLocalMirror = true
-                    // Reload data from local mirror
-                    await loadSchemas()
-                    await loadDBGraph()
-                }
-            }
-        } catch {
-            // ignore poll errors
-        }
-    }
-
-    func deleteMirror() async {
-        guard isConnected else { return }
-        try? await api.dbDeleteMirror(connectionURL: connectionURL)
-        hasLocalMirror = false
-        // Reload from remote
-        await loadSchemas()
     }
 
     // MARK: - Schema / Tables

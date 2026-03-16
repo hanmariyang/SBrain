@@ -117,29 +117,4 @@ class APIClient {
         return try JSONDecoder().decode(BrainGraph.self, from: data)
     }
 
-    // MARK: - DB Mirror (Download / Sync)
-
-    func dbDownload(connectionURL: String) async throws {
-        let url = URL(string: "\(baseURL)/db/download/")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(["connection_url": connectionURL])
-        let _ = try await URLSession.shared.data(for: request)
-    }
-
-    func dbDownloadStatus() async throws -> DBDownloadStatus {
-        let url = URL(string: "\(baseURL)/db/download/status/")!
-        let (data, _) = try await URLSession.shared.data(from: url)
-        return try JSONDecoder().decode(DBDownloadStatus.self, from: data)
-    }
-
-    func dbDeleteMirror(connectionURL: String) async throws {
-        let url = URL(string: "\(baseURL)/db/mirror/delete/")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(["connection_url": connectionURL])
-        let _ = try await URLSession.shared.data(for: request)
-    }
 }

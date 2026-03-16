@@ -65,6 +65,19 @@ struct ContentView: View {
             if viewMode == .database {
                 DBDetailView()
                     .frame(minWidth: 350, idealWidth: 450)
+            } else if viewMode == .brain,
+                      let path = noteStore.selectedFilePath,
+                      path.hasPrefix("db:"),
+                      dbStore.isConnected {
+                // DB neuron selected in Brain Map → show DB table detail
+                DBDetailView()
+                    .frame(minWidth: 350, idealWidth: 450)
+                    .onAppear { navigateToDBTable(path) }
+                    .onChange(of: noteStore.selectedFilePath) { _, newPath in
+                        if let p = newPath, p.hasPrefix("db:") {
+                            navigateToDBTable(p)
+                        }
+                    }
             } else {
                 MemoryDetailView()
                     .frame(minWidth: 350, idealWidth: 450)
@@ -78,6 +91,24 @@ struct ContentView: View {
         }
         .onChange(of: dbStore.dbBrainGraph?.neurons.count) { _, _ in
             noteStore.dbBrainGraph = dbStore.dbBrainGraph
+        }
+    }
+
+    /// Parse "db:schema.table" neuron ID and navigate dbStore to that table
+    private func navigateToDBTable(_ path: String) {
+        let stripped = String(path.dropFirst(3)) // remove "db:"
+        let parts = stripped.split(separator: ".", maxSplits: 1)
+        guard parts.count == 2 else { return }
+        let schema = String(parts[0])
+        let tableName = String(parts[1])
+
+        Task {
+            if dbStore.selectedSchema != schema {
+                await dbStore.selectSchema(schema)
+            }
+            if let table = dbStore.tables.first(where: { $0.name == tableName }) {
+                await dbStore.selectTable(table)
+            }
         }
     }
 
@@ -142,6 +173,8 @@ struct ProjectTabBar: View {
                         noteStore.selectProject(project.id)
                     }, onRemove: {
                         noteStore.removeProject(at: index)
+                    }, onRename: { newName in
+                        noteStore.renameProject(id: project.id, newName: newName)
                     })
                 }
 
@@ -200,7 +233,11 @@ struct ProjectTab: View {
     let isActive: Bool
     let onTap: () -> Void
     let onRemove: () -> Void
+    var onRename: ((String) -> Void)? = nil
     @State private var isHovered = false
+    @State private var isEditing = false
+    @State private var editName = ""
+    @FocusState private var isFieldFocused: Bool
 
     var body: some View {
         Button(action: onTap) {
@@ -209,18 +246,29 @@ struct ProjectTab: View {
                     .fill(projectColor)
                     .frame(width: 6, height: 6)
 
-                Text(project.name)
-                    .font(.system(size: 11, weight: isActive ? .bold : .medium))
-                    .foregroundStyle(.white.opacity(isActive ? 0.95 : 0.7))
-                    .lineLimit(1)
+                if isEditing {
+                    TextField("", text: $editName)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white)
+                        .focused($isFieldFocused)
+                        .frame(minWidth: 60, maxWidth: 140)
+                        .onSubmit { commitRename() }
+                        .onExitCommand { cancelRename() }
+                } else {
+                    Text(project.name)
+                        .font(.system(size: 11, weight: isActive ? .bold : .medium))
+                        .foregroundStyle(.white.opacity(isActive ? 0.95 : 0.7))
+                        .lineLimit(1)
+                }
 
-                if let root = project.rootFolder {
+                if let root = project.rootFolder, !isEditing {
                     Text("\(root.docFileCount)")
                         .font(.system(size: 9, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.25))
                 }
 
-                if isHovered {
+                if isHovered && !isEditing {
                     Button(action: onRemove) {
                         Image(systemName: "xmark")
                             .font(.system(size: 7, weight: .bold))
@@ -236,12 +284,36 @@ struct ProjectTab: View {
                     .fill(isActive ? projectColor.opacity(0.15) : .white.opacity(isHovered ? 0.08 : 0.04))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(isActive ? projectColor.opacity(0.5) : projectColor.opacity(0.3), lineWidth: 1)
+                            .stroke(isEditing ? Color.cyan.opacity(0.6) : (isActive ? projectColor.opacity(0.5) : projectColor.opacity(0.3)), lineWidth: 1)
                     )
             )
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
+        .onTapGesture(count: 2) {
+            startEditing()
+        }
+        .onTapGesture(count: 1) {
+            onTap()
+        }
+    }
+
+    private func startEditing() {
+        editName = project.name
+        isEditing = true
+        isFieldFocused = true
+    }
+
+    private func commitRename() {
+        let trimmed = editName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            onRename?(trimmed)
+        }
+        isEditing = false
+    }
+
+    private func cancelRename() {
+        isEditing = false
     }
 
     private var projectColor: Color {

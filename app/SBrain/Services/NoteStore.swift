@@ -28,6 +28,7 @@ class NoteStore: ObservableObject {
     private let api = APIClient.shared
     private var pollTimer: Timer?
     private let savedProjectsKey = "SBrain.projectPaths"
+    private let savedProjectNamesKey = "SBrain.projectNames"
 
     var totalDocCount: Int {
         projects.reduce(0) { $0 + ($1.rootFolder?.docFileCount ?? 0) }
@@ -180,13 +181,23 @@ class NoteStore: ObservableObject {
         rebuildGraph()
     }
 
+    func renameProject(id: UUID, newName: String) {
+        guard let idx = projects.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        projects[idx].name = trimmed
+        saveProjectPaths()
+    }
+
     func restoreProjects() {
         guard let paths = UserDefaults.standard.stringArray(forKey: savedProjectsKey) else { return }
+        let savedNames = UserDefaults.standard.dictionary(forKey: savedProjectNamesKey) as? [String: String] ?? [:]
         for path in paths {
             guard FileManager.default.fileExists(atPath: path) else { continue }
             guard !projects.contains(where: { $0.path == path }) else { continue }
             if let root = FolderScanner.scan(at: path) {
-                let project = ProjectFolder(path: path, name: URL(fileURLWithPath: path).lastPathComponent, rootFolder: root)
+                let name = savedNames[path] ?? URL(fileURLWithPath: path).lastPathComponent
+                let project = ProjectFolder(path: path, name: name, rootFolder: root)
                 projects.append(project)
             }
         }
@@ -199,6 +210,8 @@ class NoteStore: ObservableObject {
 
     private func saveProjectPaths() {
         UserDefaults.standard.set(projects.map(\.path), forKey: savedProjectsKey)
+        let names = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0.name) })
+        UserDefaults.standard.set(names, forKey: savedProjectNamesKey)
     }
 
     // Legacy compat: selectFolder maps to addFolder
@@ -344,6 +357,6 @@ class NoteStore: ObservableObject {
 struct ProjectFolder: Identifiable {
     let id = UUID()
     let path: String
-    let name: String
+    var name: String
     let rootFolder: FolderNode?
 }

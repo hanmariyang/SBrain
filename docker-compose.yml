@@ -1,50 +1,24 @@
 services:
-  # SBrain 캐시 전용 PostgreSQL
-  cache-db:
-    image: postgres:16-alpine
-    container_name: sbrain-cache-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: sbrain_cache
-      POSTGRES_USER: sbrain
-      POSTGRES_PASSWORD: sbrain
-    ports:
-      - "5434:5432"
-    volumes:
-      - cache_pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sbrain -d sbrain_cache"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   # Django backend
   backend:
+    platform: linux/amd64
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sbrain-backend
     restart: unless-stopped
     ports:
-      - "8765:8765"
+      - "127.0.0.1:8765:8765"
     env_file:
       - ./backend/.env
     environment:
-      # Override cache DB to point to the Docker PG
-      CACHE_DB_URL: postgresql://sbrain:sbrain@cache-db:5432/sbrain_cache
       PORT: "8765"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend:/app
-      - backend_data:/app/data
-    depends_on:
-      cache-db:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/api/status/')"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-volumes:
-  cache_pg_data:
-  backend_data:

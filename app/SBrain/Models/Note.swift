@@ -122,12 +122,10 @@ struct DBConnectionInfo: Codable {
     let serverVersion: String?
     let database: String?
     let error: String?
-    let hasLocalMirror: Bool?
 
     enum CodingKeys: String, CodingKey {
         case ok, database, error
         case serverVersion = "server_version"
-        case hasLocalMirror = "has_local_mirror"
     }
 }
 
@@ -197,24 +195,6 @@ struct DBSearchResult: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case schema, table, column, value
         case rowPreview = "row_preview"
-    }
-}
-
-// MARK: - DB Download Status
-
-struct DBDownloadStatus: Codable {
-    let running: Bool
-    let phase: String
-    let progress: String
-    let remoteUrl: String
-    let localDb: String
-    let error: String?
-    let elapsed: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case running, phase, progress, error, elapsed
-        case remoteUrl = "remote_url"
-        case localDb = "local_db"
     }
 }
 

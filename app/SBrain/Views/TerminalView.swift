@@ -6,6 +6,8 @@ import SwiftTerm
 struct TerminalContainerView: View {
     @EnvironmentObject var terminalManager: TerminalManager
     @EnvironmentObject var noteStore: NoteStore
+    /// When true, auto-creates a session on appear if none exist
+    var autoCreate: Bool = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,13 +18,15 @@ struct TerminalContainerView: View {
             if let session = terminalManager.activeSession {
                 SwiftTermView(terminalView: session.terminalView)
                     .id(session.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 terminalEmptyState
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
         .onAppear {
-            if terminalManager.sessions.isEmpty {
+            if autoCreate && terminalManager.sessions.isEmpty {
                 let dir = noteStore.selectedProject?.path ?? NSHomeDirectory()
                 terminalManager.createSession(workingDirectory: dir)
             }
@@ -149,12 +153,29 @@ struct TerminalTab: View {
 struct SwiftTermView: NSViewRepresentable {
     let terminalView: LocalProcessTerminalView
 
-    func makeNSView(context: Context) -> LocalProcessTerminalView {
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
         terminalView.translatesAutoresizingMaskIntoConstraints = false
-        return terminalView
+        container.addSubview(terminalView)
+        NSLayoutConstraint.activate([
+            terminalView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            terminalView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            terminalView.topAnchor.constraint(equalTo: container.topAnchor),
+            terminalView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+        return container
     }
 
-    func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+    func updateNSView(_ nsView: NSView, context: Context) {
         // Terminal view manages its own state
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: ()) {
+        // Remove terminal view from container without destroying it
+        // (it may be reused when switching between full/panel modes)
+        for subview in nsView.subviews {
+            subview.removeFromSuperview()
+        }
     }
 }

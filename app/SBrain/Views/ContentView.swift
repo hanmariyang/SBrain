@@ -161,6 +161,8 @@ struct ContentView: View {
 
 struct ProjectTabBar: View {
     @EnvironmentObject var noteStore: NoteStore
+    @State private var showNewFileDialog = false
+    @State private var newFileName = ""
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -168,11 +170,17 @@ struct ProjectTabBar: View {
                 // "All" tab
                 AllProjectsTab()
 
-                ForEach(Array(noteStore.projects.enumerated()), id: \.element.id) { index, project in
+                // Base folder tab (always first, special style)
+                if let baseProject = noteStore.projects.first(where: { $0.isBaseFolder }) {
+                    BaseFolderTab(project: baseProject, isActive: noteStore.selectedProjectId == baseProject.id)
+                }
+
+                // Other project tabs
+                ForEach(noteStore.projects.filter { !$0.isBaseFolder }, id: \.id) { project in
                     ProjectTab(project: project, isActive: noteStore.selectedProjectId == project.id, onTap: {
                         noteStore.selectProject(project.id)
                     }, onRemove: {
-                        noteStore.removeProject(at: index)
+                        noteStore.removeProject(path: project.path)
                     }, onRename: { newName in
                         noteStore.renameProject(id: project.id, newName: newName)
                     })
@@ -189,11 +197,105 @@ struct ProjectTabBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("프로젝트 추가")
+
+                // New file button (visible when base folder is selected)
+                if let sel = noteStore.selectedProjectId,
+                   noteStore.projects.first(where: { $0.id == sel })?.isBaseFolder == true {
+                    Button(action: { showNewFileDialog = true }) {
+                        Image(systemName: "doc.badge.plus")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.green.opacity(0.6))
+                            .frame(width: 24, height: 24)
+                            .background(.green.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                    .buttonStyle(.plain)
+                    .help("새 문서 만들기")
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
         }
         .background(Color.black.opacity(0.2))
+        .sheet(isPresented: $showNewFileDialog) {
+            NewFileDialog(isPresented: $showNewFileDialog)
+        }
+    }
+}
+
+struct BaseFolderTab: View {
+    @EnvironmentObject var noteStore: NoteStore
+    let project: ProjectFolder
+    let isActive: Bool
+
+    var body: some View {
+        Button(action: { noteStore.selectProject(project.id) }) {
+            HStack(spacing: 6) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.green.opacity(0.8))
+
+                Text(project.name)
+                    .font(.system(size: 11, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(.white.opacity(isActive ? 0.95 : 0.6))
+                    .lineLimit(1)
+
+                if let root = project.rootFolder {
+                    Text("\(root.docFileCount)")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.25))
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isActive ? Color.green.opacity(0.15) : .white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(isActive ? Color.green.opacity(0.5) : Color.green.opacity(0.2), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct NewFileDialog: View {
+    @EnvironmentObject var noteStore: NoteStore
+    @Binding var isPresented: Bool
+    @State private var fileName = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("새 문서 만들기")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+
+            TextField("파일명 (예: my-note.md)", text: $fileName)
+                .textFieldStyle(.roundedBorder)
+                .focused($isFocused)
+                .onSubmit { create() }
+
+            HStack(spacing: 12) {
+                Button("취소") { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+
+                Button("만들기") { create() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(fileName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(24)
+        .frame(width: 320)
+        .onAppear { isFocused = true }
+    }
+
+    private func create() {
+        if noteStore.createNewFile(name: fileName) != nil {
+            isPresented = false
+        }
     }
 }
 

@@ -15,6 +15,10 @@ struct MemoryDetailView: View {
     @EnvironmentObject var handTracking: HandTrackingManager
     @StateObject private var scrollProxy = WebViewScrollProxy()
     @State private var isResultsCollapsed = false
+    @State private var isEditing = false
+    @State private var editContent = ""
+    @State private var saveDebounce: Task<Void, Never>?
+    @State private var showCopiedToast = false
 
     private var searchTerms: [String] {
         guard noteStore.isSearchActive else { return [] }
@@ -23,6 +27,11 @@ struct MemoryDetailView: View {
             .split(separator: " ")
             .map(String.init)
             .filter { $0.count >= 1 }
+    }
+
+    private var isBaseFile: Bool {
+        guard let path = noteStore.selectedFilePath else { return false }
+        return noteStore.isInBaseFolder(path)
     }
 
     var body: some View {
@@ -48,16 +57,18 @@ struct MemoryDetailView: View {
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                colors: [.cyan.opacity(0.4), .purple.opacity(0.4), .clear],
+                                colors: [isEditing ? .green.opacity(0.6) : .cyan.opacity(0.4), .purple.opacity(0.4), .clear],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                         .frame(height: 1)
 
-                    // Render based on file type
-                    if let path = noteStore.selectedFilePath,
-                       FolderScanner.fileType(for: path) == .html {
+                    if isEditing && isBaseFile {
+                        // Edit mode: raw text editor
+                        MarkdownEditor(content: $editContent, onSave: { saveEdits() })
+                    } else if let path = noteStore.selectedFilePath,
+                              FolderScanner.fileType(for: path) == .html {
                         HTMLWebView(html: content, basePath: path, highlightTerms: searchTerms, scrollProxy: scrollProxy)
                     } else {
                         MarkdownWebView(markdown: content, highlightTerms: searchTerms, scrollProxy: scrollProxy)
@@ -83,24 +94,45 @@ struct MemoryDetailView: View {
                     emptyState
                 }
             }
-            // Hand gesture: victory (✌️) joystick scroll
-            // scrollSpeed is position-based: hold hand higher = scroll up, lower = scroll down
-            .onChange(of: handTracking.scrollSpeed) { _, speed in
-                guard handTracking.gestureTarget == .viewer,
-                      handTracking.mode == .scrolling,
-                      noteStore.selectedFileContent != nil,
-                      abs(speed) > 0.01 else { return }
-                scrollProxy.scrollBy(deltaY: speed * 8)
+
+            // Copied toast
+            if showCopiedToast {
+                VStack {
+                    Spacer()
+                    Text("기본 폴더에 저장됨")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.green.opacity(0.8))
+                        .clipShape(Capsule())
+                        .padding(.bottom, 20)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            // Hand gesture: fourFingers swipe browses multi-selected
-            .onChange(of: handTracking.didSwipeRight) { _, swiped in
-                guard handTracking.gestureTarget == .viewer else { return }
-                if swiped { noteStore.browseNext() }
-            }
-            .onChange(of: handTracking.didSwipeLeft) { _, swiped in
-                guard handTracking.gestureTarget == .viewer else { return }
-                if swiped { noteStore.browsePrevious() }
-            }
+        }
+        // Hand gesture: victory (✌️) joystick scroll
+        // scrollSpeed is position-based: hold hand higher = scroll up, lower = scroll down
+        .onChange(of: handTracking.scrollSpeed) { _, speed in
+            guard handTracking.gestureTarget == .viewer,
+                  handTracking.mode == .scrolling,
+                  noteStore.selectedFileContent != nil,
+                  abs(speed) > 0.01 else { return }
+            scrollProxy.scrollBy(deltaY: speed * 8)
+        }
+        // Hand gesture: fourFingers swipe browses multi-selected
+        .onChange(of: handTracking.didSwipeRight) { _, swiped in
+            guard handTracking.gestureTarget == .viewer else { return }
+            if swiped { noteStore.browseNext() }
+        }
+        .onChange(of: handTracking.didSwipeLeft) { _, swiped in
+            guard handTracking.gestureTarget == .viewer else { return }
+            if swiped { noteStore.browsePrevious() }
+        }
+        // Reset edit mode when file changes
+        .onChange(of: noteStore.selectedFilePath) { _, _ in
+            isEditing = false
+            editContent = ""
         }
     }
 
@@ -189,15 +221,27 @@ struct MemoryDetailView: View {
     private func detailHeader(fileName: String) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text((fileName as NSString).deletingPathExtension)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(
-                        .linearGradient(
-                            colors: [.white, .white.opacity(0.7)],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                HStack(spacing: 8) {
+                    Text((fileName as NSString).deletingPathExtension)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(
+                            .linearGradient(
+                                colors: [.white, .white.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
+
+                    if isEditing {
+                        Text("편집 중")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 if let path = noteStore.selectedFilePath {
                     Text(path)
@@ -210,21 +254,120 @@ struct MemoryDetailView: View {
 
             Spacer()
 
-            Button(action: {
-                noteStore.selectedFilePath = nil
-                noteStore.selectedFileContent = nil
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(width: 24, height: 24)
-                    .background(.white.opacity(0.08))
-                    .clipShape(Circle())
+            HStack(spacing: 6) {
+                // Edit/Preview toggle (base folder files only, markdown only)
+                if isBaseFile,
+                   let path = noteStore.selectedFilePath,
+                   FolderScanner.fileType(for: path) == .markdown {
+                    Button(action: { toggleEdit() }) {
+                        Image(systemName: isEditing ? "eye" : "pencil")
+                            .font(.system(size: 10))
+                            .foregroundStyle(isEditing ? .cyan.opacity(0.8) : .green.opacity(0.7))
+                            .frame(width: 24, height: 24)
+                            .background(isEditing ? .cyan.opacity(0.12) : .green.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(isEditing ? "미리보기" : "편집")
+                }
+
+                // Save to base folder (project files only, not base folder)
+                if !isBaseFile, noteStore.selectedFilePath != nil {
+                    Button(action: { copyCurrentToBase() }) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.green.opacity(0.7))
+                            .frame(width: 24, height: 24)
+                            .background(.green.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("기본 폴더에 저장")
+                }
+
+                // Open in external editor
+                if noteStore.selectedFilePath != nil {
+                    Button(action: {
+                        if let path = noteStore.selectedFilePath {
+                            noteStore.openInExternalEditor(path: path)
+                        }
+                    }) {
+                        Image(systemName: "arrow.up.forward.app")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .frame(width: 24, height: 24)
+                            .background(.white.opacity(0.08))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("외부 에디터로 열기")
+                }
+
+                // Delete (base folder files only)
+                if isBaseFile {
+                    Button(action: {
+                        if let path = noteStore.selectedFilePath {
+                            noteStore.deleteFile(path: path)
+                            isEditing = false
+                        }
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.5))
+                            .frame(width: 24, height: 24)
+                            .background(.red.opacity(0.08))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("삭제")
+                }
+
+                // Close
+                Button(action: {
+                    isEditing = false
+                    noteStore.selectedFilePath = nil
+                    noteStore.selectedFileContent = nil
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .frame(width: 24, height: 24)
+                        .background(.white.opacity(0.08))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
+    }
+
+    private func toggleEdit() {
+        if isEditing {
+            // Switching to preview: save first
+            if let path = noteStore.selectedFilePath {
+                noteStore.saveFileContent(path: path, content: editContent)
+            }
+            isEditing = false
+        } else {
+            // Switching to edit
+            editContent = noteStore.selectedFileContent ?? ""
+            isEditing = true
+        }
+    }
+
+    private func saveEdits() {
+        guard let path = noteStore.selectedFilePath else { return }
+        noteStore.saveFileContent(path: path, content: editContent)
+    }
+
+    private func copyCurrentToBase() {
+        guard let path = noteStore.selectedFilePath else { return }
+        noteStore.copyToBaseFolder(sourcePath: path)
+        withAnimation { showCopiedToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation { showCopiedToast = false }
+        }
     }
 
     private var emptyState: some View {
@@ -822,6 +965,96 @@ struct MarkdownWebView: NSViewRepresentable {
         if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     """
+}
+
+// MARK: - Markdown Editor (raw text editing for base folder files)
+
+struct MarkdownEditor: NSViewRepresentable {
+    @Binding var content: String
+    var onSave: () -> Void
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        let textView = scrollView.documentView as! NSTextView
+
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.allowsUndo = true
+        textView.isRichText = false
+        textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        textView.textColor = NSColor(white: 0.85, alpha: 1)
+        textView.backgroundColor = NSColor(red: 0.05, green: 0.05, blue: 0.09, alpha: 1)
+        textView.insertionPointColor = NSColor.cyan
+        textView.textContainerInset = NSSize(width: 20, height: 16)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+
+        textView.delegate = context.coordinator
+        textView.string = content
+
+        scrollView.hasVerticalScroller = true
+        scrollView.scrollerStyle = .overlay
+        scrollView.drawsBackground = false
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != content && !context.coordinator.isEditing {
+            textView.string = content
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(content: $content, onSave: onSave)
+    }
+
+    class Coordinator: NSObject, NSTextViewDelegate {
+        var content: Binding<String>
+        var onSave: () -> Void
+        var isEditing = false
+        private var debounceTask: DispatchWorkItem?
+
+        init(content: Binding<String>, onSave: @escaping () -> Void) {
+            self.content = content
+            self.onSave = onSave
+        }
+
+        func textDidBeginEditing(_ notification: Notification) {
+            isEditing = true
+        }
+
+        func textDidEndEditing(_ notification: Notification) {
+            isEditing = false
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            content.wrappedValue = textView.string
+
+            // Auto-save with 3s debounce
+            debounceTask?.cancel()
+            let task = DispatchWorkItem { [weak self] in
+                DispatchQueue.main.async {
+                    self?.onSave()
+                }
+            }
+            debounceTask = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: task)
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            // Cmd+S to save
+            if commandSelector == NSSelectorFromString("saveDocument:") {
+                content.wrappedValue = textView.string
+                onSave()
+                return true
+            }
+            return false
+        }
+    }
 }
 
 // MARK: - HTML WebView (direct HTML rendering)

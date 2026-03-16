@@ -26,24 +26,33 @@ struct ContentView: View {
     @EnvironmentObject var noteStore: NoteStore
     @EnvironmentObject var backendManager: BackendManager
     @EnvironmentObject var dbStore: DatabaseStore
+    @EnvironmentObject var terminalManager: TerminalManager
     @State private var viewMode: ViewMode = .list
+    @State private var showBottomTerminal = false
+    @State private var bottomTerminalHeight: CGFloat = 250
+    @State private var isFullTerminal = false
 
     var body: some View {
         HSplitView {
             // Left: Projects + content
             VStack(spacing: 0) {
-                TopBar(viewMode: $viewMode)
+                TopBar(
+                    viewMode: $viewMode,
+                    showBottomTerminal: $showBottomTerminal,
+                    isFullTerminal: $isFullTerminal
+                )
 
                 if noteStore.isIngesting, let status = noteStore.ingestStatus {
                     MemorizeProgressView(status: status)
                 }
 
-                if viewMode == .database {
-                    // Database browser (available even without projects)
+                if isFullTerminal {
+                    // Full terminal mode — left side shows nothing (terminal fills right)
+                    emptyTerminalLeftState
+                } else if viewMode == .database {
                     if noteStore.hasProjects { ProjectTabBar() }
                     DatabaseBrowserView()
                 } else if noteStore.hasProjects {
-                    // Project tabs
                     ProjectTabBar()
 
                     switch viewMode {
@@ -52,7 +61,7 @@ struct ContentView: View {
                     case .brain:
                         BrainMapView()
                     case .database:
-                        EmptyView() // handled above
+                        EmptyView()
                     }
                 } else {
                     emptyState
@@ -61,26 +70,27 @@ struct ContentView: View {
             .frame(minWidth: 500)
             .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
 
-            // Right: Detail panel
-            if viewMode == .database {
-                DBDetailView()
+            // Right: Detail panel + bottom terminal
+            if isFullTerminal {
+                // Full terminal takes the entire right side
+                TerminalContainerView()
                     .frame(minWidth: 350, idealWidth: 450)
-            } else if viewMode == .brain,
-                      let path = noteStore.selectedFilePath,
-                      path.hasPrefix("db:"),
-                      dbStore.isConnected {
-                // DB neuron selected in Brain Map → show DB table detail
-                DBDetailView()
-                    .frame(minWidth: 350, idealWidth: 450)
-                    .onAppear { navigateToDBTable(path) }
-                    .onChange(of: noteStore.selectedFilePath) { _, newPath in
-                        if let p = newPath, p.hasPrefix("db:") {
-                            navigateToDBTable(p)
-                        }
-                    }
             } else {
-                MemoryDetailView()
-                    .frame(minWidth: 350, idealWidth: 450)
+                VStack(spacing: 0) {
+                    // Detail content
+                    detailView
+                        .frame(maxHeight: .infinity)
+
+                    // Bottom terminal panel
+                    if showBottomTerminal {
+                        BottomTerminalPanel(
+                            height: $bottomTerminalHeight,
+                            showBottomTerminal: $showBottomTerminal,
+                            isFullTerminal: $isFullTerminal
+                        )
+                    }
+                }
+                .frame(minWidth: 350, idealWidth: 450)
             }
         }
         .frame(minWidth: 900, minHeight: 550)
@@ -91,6 +101,26 @@ struct ContentView: View {
         }
         .onChange(of: dbStore.dbBrainGraph?.neurons.count) { _, _ in
             noteStore.dbBrainGraph = dbStore.dbBrainGraph
+        }
+    }
+
+    @ViewBuilder
+    private var detailView: some View {
+        if viewMode == .database {
+            DBDetailView()
+        } else if viewMode == .brain,
+                  let path = noteStore.selectedFilePath,
+                  path.hasPrefix("db:"),
+                  dbStore.isConnected {
+            DBDetailView()
+                .onAppear { navigateToDBTable(path) }
+                .onChange(of: noteStore.selectedFilePath) { _, newPath in
+                    if let p = newPath, p.hasPrefix("db:") {
+                        navigateToDBTable(p)
+                    }
+                }
+        } else {
+            MemoryDetailView()
         }
     }
 
@@ -109,6 +139,22 @@ struct ContentView: View {
             if let table = dbStore.tables.first(where: { $0.name == tableName }) {
                 await dbStore.selectTable(table)
             }
+        }
+    }
+
+    private var emptyTerminalLeftState: some View {
+        VStack(spacing: 12) {
+            Spacer()
+            Image(systemName: "terminal")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange.opacity(0.15))
+            Text("전체 터미널 모드")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.3))
+            Text("우측에서 터미널을 사용 중입니다")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.15))
+            Spacer()
         }
     }
 
@@ -432,6 +478,8 @@ struct TopBar: View {
     @EnvironmentObject var backendManager: BackendManager
     @EnvironmentObject var handTracking: HandTrackingManager
     @Binding var viewMode: ViewMode
+    @Binding var showBottomTerminal: Bool
+    @Binding var isFullTerminal: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -464,24 +512,51 @@ struct TopBar: View {
 
             Spacer()
 
-            // View mode toggle
+            // View mode toggle + terminal button
             HStack(spacing: 2) {
                 ForEach(ViewMode.allCases, id: \.self) { mode in
-                    Button(action: { viewMode = mode }) {
+                    Button(action: {
+                        if isFullTerminal { isFullTerminal = false }
+                        viewMode = mode
+                    }) {
                         Image(systemName: mode.icon)
                             .font(.system(size: 12))
                             .frame(width: 28, height: 22)
                             .background(
-                                viewMode == mode
+                                viewMode == mode && !isFullTerminal
                                     ? Color.white.opacity(0.15)
                                     : Color.clear
                             )
                             .clipShape(RoundedRectangle(cornerRadius: 4))
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(viewMode == mode ? .white : .white.opacity(0.4))
+                    .foregroundStyle(viewMode == mode && !isFullTerminal ? .white : .white.opacity(0.4))
                     .help(mode.label)
                 }
+
+                // Terminal toggle button (part of the mode group)
+                Button(action: {
+                    if isFullTerminal {
+                        // Exit full terminal → show as bottom panel
+                        isFullTerminal = false
+                        showBottomTerminal = true
+                    } else {
+                        showBottomTerminal.toggle()
+                    }
+                }) {
+                    Image(systemName: "terminal")
+                        .font(.system(size: 12))
+                        .frame(width: 28, height: 22)
+                        .background(
+                            (showBottomTerminal || isFullTerminal)
+                                ? Color.orange.opacity(0.2)
+                                : Color.clear
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle((showBottomTerminal || isFullTerminal) ? .orange : .white.opacity(0.4))
+                .help(showBottomTerminal ? "터미널 닫기" : "터미널 열기")
             }
             .padding(2)
             .background(.white.opacity(0.05))
@@ -626,5 +701,101 @@ struct MemorizeProgressView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
         .background(Color.purple.opacity(0.1))
+    }
+}
+
+// MARK: - Bottom Terminal Panel
+
+struct BottomTerminalPanel: View {
+    @EnvironmentObject var terminalManager: TerminalManager
+    @EnvironmentObject var noteStore: NoteStore
+    @Binding var height: CGFloat
+    @Binding var showBottomTerminal: Bool
+    @Binding var isFullTerminal: Bool
+    @State private var isDragging = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Drag handle / header
+            HStack(spacing: 8) {
+                // Drag handle
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(.white.opacity(0.2))
+                    .frame(width: 36, height: 3)
+
+                Spacer()
+
+                Text("터미널")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.4))
+
+                if !terminalManager.sessions.isEmpty {
+                    Text("\(terminalManager.sessions.count)")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+
+                Spacer()
+
+                // Maximize — switch to full terminal view
+                Button(action: {
+                    showBottomTerminal = false
+                    isFullTerminal = true
+                }) {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+                .help("전체 터미널로 전환")
+
+                // Close
+                Button(action: { showBottomTerminal = false }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .buttonStyle(.plain)
+                .help("터미널 패널 닫기")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.5))
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        isDragging = true
+                        let newHeight = height - value.translation.height
+                        height = max(120, min(500, newHeight))
+                    }
+                    .onEnded { _ in isDragging = false }
+            )
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeUpDown.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+
+            // Divider
+            Rectangle()
+                .fill(Color.orange.opacity(0.3))
+                .frame(height: 1)
+
+            // Terminal content — reuse TerminalContainerView
+            TerminalContainerView()
+        }
+        .frame(height: height)
+        .onAppear {
+            if terminalManager.sessions.isEmpty {
+                let dir = noteStore.selectedProject?.path ?? NSHomeDirectory()
+                terminalManager.createSession(workingDirectory: dir)
+            }
+        }
     }
 }

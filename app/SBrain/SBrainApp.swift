@@ -6,6 +6,7 @@ struct SBrainApp: App {
     @StateObject private var noteStore = NoteStore()
     @StateObject private var handTracking = HandTrackingManager()
     @StateObject private var dbStore = DatabaseStore()
+    @StateObject private var terminalManager = TerminalManager()
 
     var body: some Scene {
         WindowGroup {
@@ -14,6 +15,7 @@ struct SBrainApp: App {
                 .environmentObject(noteStore)
                 .environmentObject(handTracking)
                 .environmentObject(dbStore)
+                .environmentObject(terminalManager)
                 .onAppear {
                     backendManager.start()
                 }

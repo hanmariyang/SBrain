@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0C1BB40C09A03F90B8BE575B /* HandCursorOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7A5190CBD9E8F4C1DF06DA /* HandCursorOverlay.swift */; };
 		1A834DA447A414DA0D955400 /* HandTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */; };
+		1CB733DDA08043559653192D /* TerminalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F809E41E7C72810A86C8E839 /* TerminalManager.swift */; };
 		404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F625EF94764920370B930 /* DatabaseStore.swift */; };
 		7B6A5A92D196C82E4CA1BC36 /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714A8F991F10DB023F90B523 /* FolderScanner.swift */; };
 		82F1FF5E887C7DE2EE0CD0BF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D342196863002E996A7027 /* ContentView.swift */; };
@@ -18,6 +19,8 @@
 		9D907150551731990650F10C /* NoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */; };
 		A77C7594B0966FA43A5C197C /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1063843C8FF0AAD02172AB79 /* APIClient.swift */; };
 		AD774350C6B035DD11AE0BED /* NoteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7D097F10003525C94A8B00 /* NoteDetailView.swift */; };
+		B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 01B4E7973C454AE1A6921772 /* SwiftTerm */; };
+		BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */; };
 		C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */; };
 		D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7544CAB23D252B03FB65F9C /* SBrainApp.swift */; };
 		D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F737901CA8A7C63C9E7127A /* SearchBar.swift */; };
@@ -44,7 +47,20 @@
 		DB7D097F10003525C94A8B00 /* NoteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteDetailView.swift; sourceTree = "<group>"; };
 		DBCC751B2DE2EF17D2DA5F5F /* SBrain.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SBrain.entitlements; sourceTree = "<group>"; };
 		EE10BC28BD73F99874A555AC /* Note.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
+		F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
+		F809E41E7C72810A86C8E839 /* TerminalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D7465CB40CBDD100D0BE6D6B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		42AEAF06CEAF5F5F19710B6F /* SBrain */ = {
@@ -85,6 +101,7 @@
 				628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */,
 				09F625507856F470275E96B7 /* LocalGraphBuilder.swift */,
 				D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */,
+				F809E41E7C72810A86C8E839 /* TerminalManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -107,6 +124,7 @@
 				DB7D097F10003525C94A8B00 /* NoteDetailView.swift */,
 				D74140C2CF4145F55F886B78 /* NoteListView.swift */,
 				3F737901CA8A7C63C9E7127A /* SearchBar.swift */,
+				F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -119,6 +137,7 @@
 			buildConfigurationList = 00556AC6D1D8424E65BC0ABC /* Build configuration list for PBXNativeTarget "SBrain" */;
 			buildPhases = (
 				8627FE52D54C59791645F005 /* Sources */,
+				D7465CB40CBDD100D0BE6D6B /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -126,6 +145,7 @@
 			);
 			name = SBrain;
 			packageProductDependencies = (
+				01B4E7973C454AE1A6921772 /* SwiftTerm */,
 			);
 			productName = SBrain;
 			productReference = 8E21D81A3BB7AB638BA4B919 /* SBrain.app */;
@@ -151,6 +171,9 @@
 			);
 			mainGroup = 89B9CBF6DB70D8B8167118EF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93F7D0CA0B10B36E23B89BF3 /* Products */;
 			projectDirPath = "";
@@ -182,6 +205,8 @@
 				9D907150551731990650F10C /* NoteStore.swift in Sources */,
 				D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */,
 				D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */,
+				1CB733DDA08043559653192D /* TerminalManager.swift in Sources */,
+				BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -373,6 +398,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		01B4E7973C454AE1A6921772 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C338262C7184E054D7DAE702 /* Project object */;
 }

@@ -4,12 +4,14 @@ enum ViewMode: String, CaseIterable {
     case brain = "brain"
     case list = "list"
     case database = "database"
+    case terminal = "terminal"
 
     var icon: String {
         switch self {
         case .brain: return "brain"
         case .list: return "list.bullet"
         case .database: return "cylinder.split.1x2"
+        case .terminal: return "terminal"
         }
     }
 
@@ -18,6 +20,7 @@ enum ViewMode: String, CaseIterable {
         case .brain: return "Brain Map"
         case .list: return "List"
         case .database: return "Database"
+        case .terminal: return "Terminal"
         }
     }
 }
@@ -38,7 +41,9 @@ struct ContentView: View {
                     MemorizeProgressView(status: status)
                 }
 
-                if viewMode == .database {
+                if viewMode == .terminal {
+                    TerminalContainerView()
+                } else if viewMode == .database {
                     // Database browser (available even without projects)
                     if noteStore.hasProjects { ProjectTabBar() }
                     DatabaseBrowserView()
@@ -51,7 +56,7 @@ struct ContentView: View {
                         FolderTreeView()
                     case .brain:
                         BrainMapView()
-                    case .database:
+                    case .database, .terminal:
                         EmptyView() // handled above
                     }
                 } else {
@@ -61,8 +66,10 @@ struct ContentView: View {
             .frame(minWidth: 500)
             .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
 
-            // Right: Detail panel
-            if viewMode == .database {
+            // Right: Detail panel (hidden in terminal mode — terminal uses full width)
+            if viewMode == .terminal {
+                EmptyView()
+            } else if viewMode == .database {
                 DBDetailView()
                     .frame(minWidth: 350, idealWidth: 450)
             } else if viewMode == .brain,

@@ -6,7 +6,7 @@
 노트를 **뉴런(Neuron)**으로, 유사한 노트 간 연결을 **시냅스(Synapse)**로 표현하여
 실제 뇌 속을 탐색하는 듯한 경험을 제공.
 
-**현재 버전: v0.2.0** — 멀티 프로젝트, 3D Sphere Brain Map, 프로젝트 필터링, HTML 지원
+**현재 버전: v0.5.0** — 멀티 프로젝트, 3D Brain Map, 통합 터미널, 개인 워크스페이스, DB 브라우저
 
 ---
 
@@ -44,9 +44,9 @@ Docs/
 
 개발 요청을 받으면 **코드 작성 전 반드시 아래 2가지를 먼저 실행**한다.
 
-1. **브랜치 생성 및 전환**
+1. **브랜치 생성 및 전환** (develop에서 분기)
    ```bash
-   git checkout main && git pull
+   git checkout develop && git pull origin develop
    git checkout -b v{X.Y.Z}/{descriptive-name}
    ```
 2. **Docs 폴더 생성** — 버전/기능명과 동일한 이름으로 생성
@@ -207,3 +207,56 @@ PORT=8765
 - Brain Map 렌더링: 단일 Canvas + TimelineView 30fps + 3D→2D 원근 투영
 - 제스처: `.simultaneousGesture()` + `minimumDistance: 5`로 충돌 방지
 - 줌: NSView `scrollWheel` 이벤트 직접 처리 (SwiftUI MagnificationGesture 대체)
+
+---
+
+## 12. Git 브랜치 전략
+
+`Docs/Git Policy/git_branch_strategy.md` 참조. 핵심 규칙:
+
+- **영구 브랜치**: `main` (프로덕션) + `develop` (개발 통합)
+- **피처 브랜치**: `develop`에서 분기 → `v{X.Y.Z}/{descriptive-name}`
+- **머지 순서**: feature → develop → main (PR 또는 직접 머지)
+- **금지**: main 직접 push, force-push, 태그 삭제
+
+---
+
+## 13. 릴리즈 & 배포
+
+### 배포 방식
+- **Direct Distribution** — `.dmg` 파일로 직접 배포
+- **코드 서명**: Developer ID Application (Apple Developer Program)
+- **공증**: Apple Notarization → GateKeeper 경고 없음
+- **자동 업데이트**: Sparkle 2 프레임워크 (Ed25519 서명, 24시간 주기 확인)
+
+### 릴리즈 CI/CD
+- `.github/workflows/release.yml` — `v*` 태그 push 시 자동 실행
+- 파이프라인: Archive → 서명 → 공증 → DMG → appcast.xml → GitHub Release
+- GitHub Secrets: `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`, `SPARKLE_PRIVATE_KEY`
+
+### 커맨드
+- **`/release {version}`** — 정식 릴리즈 (버전 업데이트 → main 머지 → 태그 → CI 트리거)
+- **`/hotfix {description}`** — 긴급 패치 (PATCH 증가 → 수정 → 즉시 릴리즈)
+
+### 릴리즈 흐름
+```
+develop (기능 완료)
+  → /release 0.6.0
+    → project.yml 버전 업데이트
+    → develop → main 머지
+    → v0.6.0 태그 push
+    → GitHub Actions 자동 실행
+      → 빌드 → 서명 → 공증 → DMG → Release
+    → 사용자 앱: Sparkle 자동 업데이트 감지
+```
+
+### 버전 관리
+- `MARKETING_VERSION`: Semantic Versioning (Major.Minor.Patch)
+- `CURRENT_PROJECT_VERSION`: 빌드 번호 (릴리즈마다 1 증가)
+- Sparkle appcast.xml: GitHub raw URL (`main` 브랜치)
+
+### 주의사항
+- XcodeGen(`xcodegen generate`)을 버전 변경 후 반드시 재실행
+- 공증(Notarization)은 인터넷 연결 필수, 3~15분 소요
+- Sparkle Ed25519 비밀키는 Keychain + GitHub Secrets에 보관
+- `appcast.xml`은 CI가 자동 업데이트하므로 수동 편집하지 않는다

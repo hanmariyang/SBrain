@@ -10,15 +10,20 @@ env:
   SCHEME: SBrain
   PROJECT_DIR: app
 
+permissions:
+  contents: write
+
 jobs:
   release:
-    runs-on: macos-14
-    timeout-minutes: 30
+    runs-on: macos-15
+    timeout-minutes: 45
 
     steps:
       # 1. Checkout
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # 2. Extract version from tag
       - name: Get version

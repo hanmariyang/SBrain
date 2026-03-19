@@ -282,7 +282,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "손 제스처 인식을 위해 카메라를 사용합니다";
@@ -291,12 +291,14 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.5.0;
+				MARKETING_VERSION = 0.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
+				SUAutomaticallyUpdate = YES;
+				SUEnableAutomaticChecks = YES;
 				SUFeedURL = "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml";
 				SUPublicEDKey = "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=";
-				SUScheduledCheckInterval = 86400;
+				SUScheduledCheckInterval = 3600;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
@@ -426,7 +428,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "손 제스처 인식을 위해 카메라를 사용합니다";
@@ -435,12 +437,14 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.5.0;
+				MARKETING_VERSION = 0.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
+				SUAutomaticallyUpdate = YES;
+				SUEnableAutomaticChecks = YES;
 				SUFeedURL = "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml";
 				SUPublicEDKey = "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=";
-				SUScheduledCheckInterval = 86400;
+				SUScheduledCheckInterval = 3600;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;

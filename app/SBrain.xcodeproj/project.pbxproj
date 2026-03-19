@@ -11,6 +11,7 @@
 		1A834DA447A414DA0D955400 /* HandTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */; };
 		1CB733DDA08043559653192D /* TerminalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F809E41E7C72810A86C8E839 /* TerminalManager.swift */; };
 		404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F625EF94764920370B930 /* DatabaseStore.swift */; };
+		522E184854B3A41937916B16 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1F7289016E3F4EC647338E91 /* Sparkle */; };
 		7B6A5A92D196C82E4CA1BC36 /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714A8F991F10DB023F90B523 /* FolderScanner.swift */; };
 		82F1FF5E887C7DE2EE0CD0BF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D342196863002E996A7027 /* ContentView.swift */; };
 		858D2381E38B796A44F304D8 /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74140C2CF4145F55F886B78 /* NoteListView.swift */; };
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */,
+				522E184854B3A41937916B16 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +148,7 @@
 			name = SBrain;
 			packageProductDependencies = (
 				01B4E7973C454AE1A6921772 /* SwiftTerm */,
+				1F7289016E3F4EC647338E91 /* Sparkle */,
 			);
 			productName = SBrain;
 			productReference = 8E21D81A3BB7AB638BA4B919 /* SBrain.app */;
@@ -172,6 +175,7 @@
 			mainGroup = 89B9CBF6DB70D8B8167118EF;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -228,9 +232,12 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
+				SUFeedURL = "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml";
+				SUPublicEDKey = "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=";
+				SUScheduledCheckInterval = 86400;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
@@ -369,9 +376,12 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
+				SUFeedURL = "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml";
+				SUPublicEDKey = "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=";
+				SUScheduledCheckInterval = 86400;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
@@ -408,6 +418,14 @@
 				minimumVersion = 1.2.0;
 			};
 		};
+		FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.6.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -415,6 +433,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
 			productName = SwiftTerm;
+		};
+		1F7289016E3F4EC647338E91 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

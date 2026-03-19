@@ -7,7 +7,7 @@
 
 ## 인자
 
-- `$ARGUMENTS` — 릴리즈 버전 번호 (예: `0.6.0`). 인자가 없으면 사용자에게 버전을 물어본다.
+- `$ARGUMENTS` — 릴리즈 버전 번호 (예: `0.6.0`). 인자가 없으면 `/version`을 실행하여 현재 버전을 보여주고 사용자에게 새 버전을 물어본다.
 
 ## 실행 단계
 
@@ -38,9 +38,13 @@ git pull origin develop
 
 1. `app/project.yml`의 `MARKETING_VERSION`을 `$ARGUMENTS`로 업데이트
 2. `CURRENT_PROJECT_VERSION`을 1 증가
-3. XcodeGen 재생성: `cd app && xcodegen generate`
-4. 빌드 확인: `xcodebuild -project SBrain.xcodeproj -scheme SBrain -configuration Release build`
-5. 빌드 성공 시 커밋:
+3. `CLAUDE.md`의 `**현재 버전:` 라인을 새 버전 정보로 업데이트. 형식:
+   ```
+   **현재 버전: v{VERSION}** — {기존 설명은 유지하되, 새 주요 기능이 있으면 추가}
+   ```
+4. XcodeGen 재생성: `cd app && xcodegen generate`
+5. 빌드 확인: `xcodebuild -project SBrain.xcodeproj -scheme SBrain -configuration Release build`
+6. 빌드 성공 시 변경 파일 모두 커밋:
    ```
    chore: bump version to v{VERSION}
    ```
@@ -92,7 +96,7 @@ CI 실행 상태를 사용자에게 보여준다.
 ### 7. 완료 메시지
 
 ```
-✅ v{VERSION} 릴리즈 완료
+v{VERSION} 릴리즈 완료
 - 태그: v{VERSION}
 - GitHub Actions: 빌드/서명/공증/DMG 생성 자동 진행 중
 - Release URL: https://github.com/hanmariyang/SBrain/releases/tag/v{VERSION}

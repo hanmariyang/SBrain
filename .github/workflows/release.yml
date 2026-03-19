@@ -175,6 +175,9 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
+          # Remove notarization zip to avoid duplicate version error
+          rm -f "build/${{ env.APP_NAME }}.zip"
+
           SPARKLE_BIN=$(find ~/Library/Developer/Xcode/DerivedData -name "generate_appcast" -path "*/sparkle/*" | head -1)
 
           if [ -z "$SPARKLE_BIN" ]; then

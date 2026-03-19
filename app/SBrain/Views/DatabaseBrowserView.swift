@@ -28,7 +28,7 @@ private struct DBConnectionView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(
                     .linearGradient(
-                        colors: [.green, .cyan],
+                        colors: [SB.Colors.accentGreen, SB.Colors.accentBlue],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -37,27 +37,27 @@ private struct DBConnectionView: View {
 
             Text("PostgreSQL 데이터베이스 연결")
                 .font(.title3)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(SB.Colors.navy500)
 
             Text("읽기 전용으로 테이블 구조와 데이터를 탐색합니다")
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.3))
+                .foregroundStyle(SB.Colors.navy300)
 
             VStack(spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "link")
-                        .foregroundStyle(.green.opacity(0.6))
+                        .foregroundStyle(SB.Colors.accentGreen)
                         .font(.system(size: 12))
 
                     TextField("postgres://user:pass@host:5432/dbname", text: $urlInput)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(SB.Colors.navy900)
                         .onSubmit { connect() }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(.white.opacity(0.06))
+                .background(SB.Colors.bgTertiary)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
@@ -75,7 +75,7 @@ private struct DBConnectionView: View {
                     .padding(.vertical, 8)
                     .background(
                         LinearGradient(
-                            colors: [.green.opacity(0.5), .cyan.opacity(0.5)],
+                            colors: [SB.Colors.accentGreen.opacity(0.5), SB.Colors.accentBlue.opacity(0.5)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -83,7 +83,7 @@ private struct DBConnectionView: View {
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.white)
+                .foregroundStyle(.white)  // 버튼 위 흰색 텍스트 (green gradient bg)
                 .disabled(dbStore.isConnecting || urlInput.trimmingCharacters(in: .whitespaces).isEmpty)
 
                 if let error = dbStore.connectionError {
@@ -121,7 +121,7 @@ private struct DBTableListView: View {
 
                 Text(dbStore.databaseName)
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(SB.Colors.navy900)
                     .lineLimit(1)
 
                 Spacer()
@@ -129,7 +129,7 @@ private struct DBTableListView: View {
                 Button(action: { dbStore.disconnect() }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(SB.Colors.navy300)
                 }
                 .buttonStyle(.plain)
                 .help("연결 해제")
@@ -150,16 +150,16 @@ private struct DBTableListView: View {
                                 HStack(spacing: 4) {
                                     Text(schema.name)
                                         .font(.system(size: 10, weight: isActive ? .bold : .regular, design: .monospaced))
-                                        .foregroundStyle(isActive ? .white : .white.opacity(0.5))
+                                        .foregroundStyle(isActive ? SB.Colors.navy900 : SB.Colors.navy500)
                                     Text("\(schema.tableCount)")
                                         .font(.system(size: 8, design: .monospaced))
-                                        .foregroundStyle(.white.opacity(0.25))
+                                        .foregroundStyle(SB.Colors.navy300)
                                 }
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(
                                     RoundedRectangle(cornerRadius: 4)
-                                        .fill(isActive ? Color.green.opacity(0.2) : .white.opacity(0.04))
+                                        .fill(isActive ? SB.Colors.accentGreen.opacity(0.15) : SB.Colors.bgTertiary.opacity(0.5))
                                 )
                             }
                             .buttonStyle(.plain)
@@ -168,10 +168,10 @@ private struct DBTableListView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 6)
                 }
-                .background(Color.black.opacity(0.2))
+                .background(SB.Colors.bgTertiary)
             }
 
-            Divider().background(.white.opacity(0.1))
+            Divider().background(SB.Colors.navy100)
 
             // Table list
             ScrollView {
@@ -186,7 +186,7 @@ private struct DBTableListView: View {
                 .padding(.vertical, 4)
             }
         }
-        .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
+        .background(SB.Colors.bgSecondary)
     }
 }
 
@@ -198,13 +198,13 @@ private struct DBTableRow: View {
         HStack(spacing: 8) {
             Image(systemName: table.type == "VIEW" ? "eye" : "tablecells")
                 .font(.system(size: 10))
-                .foregroundStyle(isSelected ? .green : .white.opacity(0.3))
+                .foregroundStyle(isSelected ? SB.Colors.accentGreen : SB.Colors.navy300)
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(table.name)
                     .font(.system(size: 11, weight: isSelected ? .bold : .regular, design: .monospaced))
-                    .foregroundStyle(isSelected ? .white : .white.opacity(0.7))
+                    .foregroundStyle(isSelected ? SB.Colors.navy900 : SB.Colors.navy700)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
@@ -212,7 +212,7 @@ private struct DBTableRow: View {
                     Text("~\(formatRowCount(table.rowEstimate)) rows")
                 }
                 .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.25))
+                .foregroundStyle(SB.Colors.navy300)
             }
 
             Spacer()
@@ -237,7 +237,7 @@ struct DBDetailView: View {
 
     var body: some View {
         ZStack {
-            Color(nsColor: NSColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 1))
+            SB.Colors.bgPrimary
 
             VStack(spacing: 0) {
                 // DB search bar
@@ -271,13 +271,13 @@ struct DBDetailView: View {
     private var dbSearchBar: some View {
         HStack(spacing: 8) {
             Image(systemName: "sparkle.magnifyingglass")
-                .foregroundStyle(dbStore.searchResults.isEmpty ? .green.opacity(0.6) : .yellow.opacity(0.8))
+                .foregroundStyle(dbStore.searchResults.isEmpty ? SB.Colors.accentGreen : .yellow.opacity(0.8))
                 .font(.system(size: 12))
 
             TextField("DB 회상하기...", text: $dbStore.searchQuery)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
-                .foregroundStyle(.white)
+                .foregroundStyle(SB.Colors.navy900)
                 .onSubmit { Task { await dbStore.searchDB() } }
 
             if !dbStore.searchResults.isEmpty {
@@ -293,7 +293,7 @@ struct DBDetailView: View {
             if !dbStore.searchQuery.isEmpty {
                 Button(action: { dbStore.clearSearch() }) {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(SB.Colors.navy300)
                         .font(.system(size: 10))
                 }
                 .buttonStyle(.plain)
@@ -305,7 +305,7 @@ struct DBDetailView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Color.black.opacity(0.3))
+        .background(SB.Colors.bgSecondary)
     }
 
     // MARK: - Search Results
@@ -344,18 +344,18 @@ struct DBDetailView: View {
                                             .foregroundStyle(.green.opacity(0.8))
                                         Text(result.column)
                                             .font(.system(size: 9, design: .monospaced))
-                                            .foregroundStyle(.white.opacity(0.4))
+                                            .foregroundStyle(SB.Colors.navy500)
                                     }
                                     Text(result.value)
                                         .font(.system(size: 11))
-                                        .foregroundStyle(.white.opacity(0.7))
+                                        .foregroundStyle(SB.Colors.navy700)
                                         .lineLimit(2)
                                 }
                                 Spacer()
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.02))
+                            .background(SB.Colors.bgSecondary.opacity(0.3))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -381,7 +381,7 @@ struct DBDetailView: View {
             if let info = dbStore.connectionInfo {
                 Text(info.database ?? "Database")
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(SB.Colors.navy500)
 
                 HStack(spacing: 16) {
                     statBadge(label: "스키마", value: "\(dbStore.schemas.count)")
@@ -391,7 +391,7 @@ struct DBDetailView: View {
 
             Text("왼쪽에서 테이블을 선택하세요")
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.25))
+                .foregroundStyle(SB.Colors.navy300)
 
             Spacer()
         }
@@ -404,7 +404,7 @@ struct DBDetailView: View {
                 .foregroundStyle(.green.opacity(0.7))
             Text(label)
                 .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.3))
+                .foregroundStyle(SB.Colors.navy300)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -416,10 +416,10 @@ struct DBDetailView: View {
         VStack(spacing: 12) {
             Image(systemName: "cylinder.split.1x2")
                 .font(.system(size: 40))
-                .foregroundStyle(.white.opacity(0.12))
+                .foregroundStyle(SB.Colors.navy100)
             Text("데이터베이스에 연결하면 여기에 테이블 정보가 표시됩니다")
                 .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.25))
+                .foregroundStyle(SB.Colors.navy300)
         }
     }
 
@@ -435,15 +435,15 @@ struct DBDetailView: View {
 
                 Text("\(table.schema).\(table.name)")
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(SB.Colors.navy900)
 
                 if table.type == "VIEW" {
                     Text("VIEW")
                         .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(SB.Colors.accentBlue)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Color.cyan.opacity(0.15))
+                        .background(SB.Colors.accentBlue.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                 }
 
@@ -451,11 +451,11 @@ struct DBDetailView: View {
 
                 Text("\(dbStore.columns.count) columns")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(SB.Colors.navy300)
 
                 Text("~\(formatRowCount(table.rowEstimate)) rows")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(SB.Colors.navy300)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -463,7 +463,7 @@ struct DBDetailView: View {
             // Gradient divider
             Rectangle()
                 .fill(LinearGradient(
-                    colors: [.green.opacity(0.4), .cyan.opacity(0.4), .clear],
+                    colors: [SB.Colors.accentGreen.opacity(0.4), SB.Colors.gold600.opacity(0.4), .clear],
                     startPoint: .leading, endPoint: .trailing
                 ))
                 .frame(height: 1)
@@ -479,7 +479,7 @@ struct DBDetailView: View {
                 ProgressView().tint(.green)
                 Text("데이터 로드 중...")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(SB.Colors.navy300)
                 Spacer()
             } else if let response = dbStore.rows {
                 dataTable(response)
@@ -495,7 +495,7 @@ struct DBDetailView: View {
                     HStack(spacing: 3) {
                         Text(col.name)
                             .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(SB.Colors.navy500)
                         Text(col.type)
                             .font(.system(size: 8, design: .monospaced))
                             .foregroundStyle(.green.opacity(0.5))
@@ -507,14 +507,14 @@ struct DBDetailView: View {
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.04))
+                    .background(SB.Colors.bgTertiary.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 3))
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
-        .background(Color.black.opacity(0.15))
+        .background(SB.Colors.bgTertiary)
     }
 
     // MARK: - Data Table
@@ -526,7 +526,7 @@ struct DBDetailView: View {
                 HStack(spacing: 0) {
                     Text("#")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(SB.Colors.navy300)
                         .frame(width: 40, alignment: .center)
                         .padding(.vertical, 6)
                         .background(Color.green.opacity(0.08))
@@ -534,7 +534,7 @@ struct DBDetailView: View {
                     ForEach(response.columns, id: \.self) { col in
                         Text(col)
                             .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(SB.Colors.navy900)
                             .frame(minWidth: 100, maxWidth: 200, alignment: .leading)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
@@ -552,7 +552,7 @@ struct DBDetailView: View {
                             HStack(spacing: 0) {
                                 Text("\(response.offset + rowIdx + 1)")
                                     .font(.system(size: 9, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.2))
+                                    .foregroundStyle(SB.Colors.navy300)
                                     .frame(width: 40, alignment: .center)
                                     .padding(.vertical, 5)
 
@@ -566,7 +566,7 @@ struct DBDetailView: View {
                                         .padding(.vertical, 5)
                                 }
                             }
-                            .background(isRowSelected ? Color.green.opacity(0.15) : (rowIdx % 2 == 0 ? Color.clear : Color.white.opacity(0.015)))
+                            .background(isRowSelected ? SB.Colors.accentGreen.opacity(0.1) : (rowIdx % 2 == 0 ? Color.clear : SB.Colors.bgSecondary.opacity(0.2)))
                             .overlay(isRowSelected ? RoundedRectangle(cornerRadius: 0).stroke(Color.green.opacity(0.4), lineWidth: 1) : nil)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -581,10 +581,10 @@ struct DBDetailView: View {
 
     private func cellColor(_ value: JSONValue) -> Color {
         switch value {
-        case .null: return .white.opacity(0.15)
-        case .int, .double: return .cyan.opacity(0.7)
-        case .bool: return .yellow.opacity(0.7)
-        case .string: return .white.opacity(0.6)
+        case .null: return SB.Colors.navy300
+        case .int, .double: return SB.Colors.accentBlue
+        case .bool: return SB.Colors.gold600
+        case .string: return SB.Colors.navy700
         }
     }
 
@@ -592,7 +592,7 @@ struct DBDetailView: View {
         HStack(spacing: 12) {
             Text("~\(response.totalEstimate) rows")
                 .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.3))
+                .foregroundStyle(SB.Colors.navy300)
 
             Spacer()
 
@@ -604,12 +604,12 @@ struct DBDetailView: View {
                     .font(.system(size: 10, weight: .bold))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(dbStore.currentPage > 0 ? 0.6 : 0.2))
+            .foregroundStyle(dbStore.currentPage > 0 ? SB.Colors.navy700 : SB.Colors.navy300)
             .disabled(dbStore.currentPage <= 0)
 
             Text("\(dbStore.currentPage + 1) / \(dbStore.totalPages)")
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(SB.Colors.navy500)
 
             Button(action: {
                 dbStore.selectRow(nil)
@@ -619,16 +619,16 @@ struct DBDetailView: View {
                     .font(.system(size: 10, weight: .bold))
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(dbStore.currentPage + 1 < dbStore.totalPages ? 0.6 : 0.2))
+            .foregroundStyle(dbStore.currentPage + 1 < dbStore.totalPages ? SB.Colors.navy700 : SB.Colors.navy300)
             .disabled(dbStore.currentPage + 1 >= dbStore.totalPages)
 
             Text("(\(response.offset + 1)–\(response.offset + response.rows.count))")
                 .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.2))
+                .foregroundStyle(SB.Colors.navy300)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.black.opacity(0.3))
+        .background(SB.Colors.bgSecondary)
     }
 
     // MARK: - Row Detail View
@@ -653,7 +653,7 @@ struct DBDetailView: View {
                 if let table = dbStore.selectedTable {
                     Text("\(table.schema).\(table.name)")
                         .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(SB.Colors.navy500)
                 }
 
                 if let idx = dbStore.selectedRowIndex, let rows = dbStore.rows {
@@ -664,11 +664,11 @@ struct DBDetailView: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(Color.black.opacity(0.3))
+            .background(SB.Colors.bgSecondary)
 
             Rectangle()
                 .fill(LinearGradient(
-                    colors: [.green.opacity(0.4), .cyan.opacity(0.4), .clear],
+                    colors: [SB.Colors.accentGreen.opacity(0.4), SB.Colors.gold600.opacity(0.4), .clear],
                     startPoint: .leading, endPoint: .trailing
                 ))
                 .frame(height: 1)
@@ -689,7 +689,7 @@ struct DBDetailView: View {
                                 if let info = colInfo {
                                     Text(info.type)
                                         .font(.system(size: 9, design: .monospaced))
-                                        .foregroundStyle(.white.opacity(0.25))
+                                        .foregroundStyle(SB.Colors.navy300)
                                 }
                             }
                             .frame(width: 130, alignment: .trailing)
@@ -703,7 +703,7 @@ struct DBDetailView: View {
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
-                        .background(idx % 2 == 0 ? Color.clear : Color.white.opacity(0.02))
+                        .background(idx % 2 == 0 ? Color.clear : SB.Colors.bgSecondary.opacity(0.3))
                     }
                 }
                 .padding(.vertical, 8)

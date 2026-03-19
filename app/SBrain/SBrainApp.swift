@@ -26,7 +26,6 @@ struct SBrainApp: App {
                 .onAppear {
                     backendManager.start()
                 }
-                .preferredColorScheme(.dark)
         }
         .windowStyle(.hiddenTitleBar)
         .commands {

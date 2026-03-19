@@ -24,7 +24,7 @@ struct TerminalContainerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
+        .background(SB.Colors.bgPrimary)
         .onAppear {
             if autoCreate && terminalManager.sessions.isEmpty {
                 let dir = noteStore.selectedProject?.path ?? NSHomeDirectory()
@@ -34,27 +34,22 @@ struct TerminalContainerView: View {
     }
 
     private var terminalEmptyState: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: SB.Space.md) {
             Image(systemName: "terminal")
                 .font(.system(size: 40))
-                .foregroundStyle(.white.opacity(0.12))
+                .foregroundStyle(SB.Colors.navy100)
 
             Text("터미널을 시작하려면 + 버튼을 클릭하세요")
-                .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.25))
+                .font(SB.Font.bodyMd())
+                .foregroundStyle(SB.Colors.navy300)
 
             Button(action: {
                 let dir = noteStore.selectedProject?.path ?? NSHomeDirectory()
                 terminalManager.createSession(workingDirectory: dir)
             }) {
                 Label("새 터미널", systemImage: "plus")
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.orange.opacity(0.2))
-                    .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.orange)
+            .buttonStyle(SBGoldButtonStyle())
         }
     }
 }
@@ -90,9 +85,9 @@ struct TerminalTabBar: View {
             }) {
                 Image(systemName: "plus")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(SB.Colors.navy500)
                     .frame(width: 24, height: 24)
-                    .background(.white.opacity(0.06))
+                    .background(SB.Colors.bgTertiary)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
@@ -100,7 +95,7 @@ struct TerminalTabBar: View {
             .padding(.trailing, 8)
         }
         .frame(height: 32)
-        .background(Color.black.opacity(0.4))
+        .background(SB.Colors.bgSecondary)
     }
 }
 
@@ -116,18 +111,18 @@ struct TerminalTab: View {
             HStack(spacing: 6) {
                 Image(systemName: "terminal")
                     .font(.system(size: 9))
-                    .foregroundStyle(.orange.opacity(isActive ? 0.9 : 0.5))
+                    .foregroundStyle(isActive ? SB.Colors.gold600 : SB.Colors.navy500)
 
                 Text(session.title)
                     .font(.system(size: 11, weight: isActive ? .bold : .medium))
-                    .foregroundStyle(.white.opacity(isActive ? 0.9 : 0.5))
+                    .foregroundStyle(isActive ? SB.Colors.navy900 : SB.Colors.navy500)
                     .lineLimit(1)
 
                 if isHovered || isActive {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(SB.Colors.navy300)
                     }
                     .buttonStyle(.plain)
                 }
@@ -135,11 +130,11 @@ struct TerminalTab: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isActive ? Color.orange.opacity(0.15) : .white.opacity(isHovered ? 0.06 : 0.02))
+                RoundedRectangle(cornerRadius: SB.Radius.sm)
+                    .fill(isActive ? SB.Colors.gold100 : (isHovered ? SB.Colors.bgTertiary : Color.clear))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(isActive ? Color.orange.opacity(0.4) : .clear, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: SB.Radius.sm)
+                            .stroke(isActive ? SB.Colors.gold600.opacity(0.4) : .clear, lineWidth: 1)
                     )
             )
         }
@@ -156,6 +151,9 @@ struct SwiftTermView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
         container.translatesAutoresizingMaskIntoConstraints = false
+
+        // Detach from previous superview if reused (full ↔ panel switch)
+        terminalView.removeFromSuperview()
         terminalView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(terminalView)
         NSLayoutConstraint.activate([
@@ -168,7 +166,18 @@ struct SwiftTermView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        // Terminal view manages its own state
+        // Re-attach if terminalView was stolen by another container
+        if terminalView.superview !== nsView {
+            terminalView.removeFromSuperview()
+            terminalView.translatesAutoresizingMaskIntoConstraints = false
+            nsView.addSubview(terminalView)
+            NSLayoutConstraint.activate([
+                terminalView.leadingAnchor.constraint(equalTo: nsView.leadingAnchor),
+                terminalView.trailingAnchor.constraint(equalTo: nsView.trailingAnchor),
+                terminalView.topAnchor.constraint(equalTo: nsView.topAnchor),
+                terminalView.bottomAnchor.constraint(equalTo: nsView.bottomAnchor),
+            ])
+        }
     }
 
     static func dismantleNSView(_ nsView: NSView, coordinator: ()) {

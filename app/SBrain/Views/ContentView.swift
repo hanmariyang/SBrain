@@ -22,63 +22,65 @@ enum ViewMode: String, CaseIterable {
     }
 }
 
+// MARK: - Main Content View (2-Tier Sidebar Layout)
+
 struct ContentView: View {
     @EnvironmentObject var noteStore: NoteStore
     @EnvironmentObject var backendManager: BackendManager
     @EnvironmentObject var dbStore: DatabaseStore
     @EnvironmentObject var terminalManager: TerminalManager
+
     @State private var viewMode: ViewMode = .list
+    @State private var showExplorerPanel = true
     @State private var showBottomTerminal = false
-    @State private var bottomTerminalHeight: CGFloat = 250
+    @State private var bottomTerminalHeight: CGFloat = SB.Layout.terminalDefaultHeight
     @State private var isFullTerminal = false
+    @State private var isSearchMode = false
 
     var body: some View {
-        HSplitView {
-            // Left: Projects + content
-            VStack(spacing: 0) {
-                TopBar(
+        HStack(spacing: 0) {
+            // ── 1. Icon Bar (48px, always visible) ──
+            SidebarIconBar(
+                viewMode: $viewMode,
+                showBottomTerminal: $showBottomTerminal,
+                isFullTerminal: $isFullTerminal,
+                showExplorerPanel: $showExplorerPanel,
+                isSearchMode: $isSearchMode
+            )
+
+            // ── 2. Explorer Panel (collapsible) ──
+            if showExplorerPanel {
+                ExplorerPanel(
                     viewMode: $viewMode,
-                    showBottomTerminal: $showBottomTerminal,
-                    isFullTerminal: $isFullTerminal
+                    isSearchMode: $isSearchMode
+                )
+                .frame(
+                    minWidth: SB.Layout.explorerPanelMinWidth,
+                    idealWidth: SB.Layout.explorerPanelWidth,
+                    maxWidth: SB.Layout.explorerPanelMaxWidth
                 )
 
+                // Vertical divider
+                Rectangle()
+                    .fill(SB.Colors.navy100)
+                    .frame(width: 1)
+            }
+
+            // ── 3. Main Content Area ──
+            VStack(spacing: 0) {
+                // Simplified Top Bar
+                MainTopBar(viewMode: viewMode)
+
+                // Ingestion progress
                 if noteStore.isIngesting, let status = noteStore.ingestStatus {
                     MemorizeProgressView(status: status)
                 }
 
+                // Content
                 if isFullTerminal {
-                    // Full terminal mode — left side shows nothing (terminal fills right)
-                    emptyTerminalLeftState
-                } else if viewMode == .database {
-                    if noteStore.hasProjects { ProjectTabBar() }
-                    DatabaseBrowserView()
-                } else if noteStore.hasProjects {
-                    ProjectTabBar()
-
-                    switch viewMode {
-                    case .list:
-                        FolderTreeView()
-                    case .brain:
-                        BrainMapView()
-                    case .database:
-                        EmptyView()
-                    }
+                    TerminalContainerView()
                 } else {
-                    emptyState
-                }
-            }
-            .frame(minWidth: 500)
-            .background(Color(nsColor: NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)))
-
-            // Right: Detail panel + bottom terminal
-            if isFullTerminal {
-                // Full terminal takes the entire right side
-                TerminalContainerView()
-                    .frame(minWidth: 350, idealWidth: 450)
-            } else {
-                VStack(spacing: 0) {
-                    // Detail content
-                    detailView
+                    mainContentView
                         .frame(maxHeight: .infinity)
 
                     // Bottom terminal panel
@@ -90,11 +92,10 @@ struct ContentView: View {
                         )
                     }
                 }
-                .frame(minWidth: 350, idealWidth: 450)
             }
+            .background(SB.Colors.bgPrimary)
         }
         .frame(minWidth: 900, minHeight: 550)
-        .preferredColorScheme(.dark)
         .task {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             noteStore.restoreProjects()
@@ -104,14 +105,44 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Main Content (varies by view mode)
+
+    @ViewBuilder
+    private var mainContentView: some View {
+        if !noteStore.hasProjects && viewMode != .database {
+            emptyState
+        } else {
+            switch viewMode {
+            case .brain:
+                HSplitView {
+                    BrainMapView()
+                        .frame(minWidth: 300)
+                    if noteStore.selectedFilePath != nil {
+                        detailView
+                            .frame(minWidth: 300, idealWidth: 400)
+                    }
+                }
+            case .list:
+                detailView
+            case .database:
+                HSplitView {
+                    DatabaseBrowserView()
+                        .frame(minWidth: 300)
+                    DBDetailView()
+                        .frame(minWidth: 300)
+                }
+            }
+        }
+    }
+
+    // MARK: - Detail View (list mode + brain mode DB navigation)
+
     @ViewBuilder
     private var detailView: some View {
-        if viewMode == .database {
-            DBDetailView()
-        } else if viewMode == .brain,
-                  let path = noteStore.selectedFilePath,
-                  path.hasPrefix("db:"),
-                  dbStore.isConnected {
+        if viewMode == .brain,
+           let path = noteStore.selectedFilePath,
+           path.hasPrefix("db:"),
+           dbStore.isConnected {
             DBDetailView()
                 .onAppear { navigateToDBTable(path) }
                 .onChange(of: noteStore.selectedFilePath) { _, newPath in
@@ -126,7 +157,7 @@ struct ContentView: View {
 
     /// Parse "db:schema.table" neuron ID and navigate dbStore to that table
     private func navigateToDBTable(_ path: String) {
-        let stripped = String(path.dropFirst(3)) // remove "db:"
+        let stripped = String(path.dropFirst(3))
         let parts = stripped.split(separator: ".", maxSplits: 1)
         guard parts.count == 2 else { return }
         let schema = String(parts[0])
@@ -142,31 +173,17 @@ struct ContentView: View {
         }
     }
 
-    private var emptyTerminalLeftState: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Image(systemName: "terminal")
-                .font(.system(size: 48))
-                .foregroundStyle(.orange.opacity(0.15))
-            Text("전체 터미널 모드")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.3))
-            Text("우측에서 터미널을 사용 중입니다")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.15))
-            Spacer()
-        }
-    }
+    // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: SB.Space.lg) {
             Spacer()
 
             Image(systemName: "brain")
                 .font(.system(size: 64))
                 .foregroundStyle(
                     .linearGradient(
-                        colors: [.purple, .cyan],
+                        colors: [SB.Colors.navy700, SB.Colors.gold600],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -174,492 +191,155 @@ struct ContentView: View {
                 .opacity(0.4)
 
             Text("프로젝트를 추가하세요")
-                .font(.title3)
-                .foregroundStyle(.white.opacity(0.5))
+                .font(SB.Font.titleMd())
+                .foregroundStyle(SB.Colors.navy500)
 
             Text("여러 프로젝트 폴더를 추가하면\n하나의 Brain Map에서 통합 탐색할 수 있습니다")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.3))
+                .font(SB.Font.bodySm())
+                .foregroundStyle(SB.Colors.navy300)
                 .multilineTextAlignment(.center)
 
             Button(action: { noteStore.addFolder() }) {
                 Label("프로젝트 추가", systemImage: "folder.badge.plus")
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(
-                        LinearGradient(
-                            colors: [.purple.opacity(0.5), .cyan.opacity(0.5)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white)
+            .buttonStyle(SBGoldButtonStyle())
 
             Spacer()
         }
     }
 }
 
-// MARK: - Project Tab Bar
+// MARK: - Simplified Top Bar
 
-struct ProjectTabBar: View {
-    @EnvironmentObject var noteStore: NoteStore
-    @State private var showNewFileDialog = false
-    @State private var newFileName = ""
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                // "All" tab
-                AllProjectsTab()
-
-                // Base folder tab (always first, special style)
-                if let baseProject = noteStore.projects.first(where: { $0.isBaseFolder }) {
-                    BaseFolderTab(project: baseProject, isActive: noteStore.selectedProjectId == baseProject.id)
-                }
-
-                // Other project tabs
-                ForEach(noteStore.projects.filter { !$0.isBaseFolder }, id: \.id) { project in
-                    ProjectTab(project: project, isActive: noteStore.selectedProjectId == project.id, onTap: {
-                        noteStore.selectProject(project.id)
-                    }, onRemove: {
-                        noteStore.removeProject(path: project.path)
-                    }, onRename: { newName in
-                        noteStore.renameProject(id: project.id, newName: newName)
-                    })
-                }
-
-                // Add project button
-                Button(action: { noteStore.addFolder() }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.4))
-                        .frame(width: 24, height: 24)
-                        .background(.white.opacity(0.05))
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                }
-                .buttonStyle(.plain)
-                .help("프로젝트 추가")
-
-                // New file button (visible when base folder is selected)
-                if let sel = noteStore.selectedProjectId,
-                   noteStore.projects.first(where: { $0.id == sel })?.isBaseFolder == true {
-                    Button(action: { showNewFileDialog = true }) {
-                        Image(systemName: "doc.badge.plus")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.green.opacity(0.6))
-                            .frame(width: 24, height: 24)
-                            .background(.green.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    .buttonStyle(.plain)
-                    .help("새 문서 만들기")
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-        }
-        .background(Color.black.opacity(0.2))
-        .sheet(isPresented: $showNewFileDialog) {
-            NewFileDialog(isPresented: $showNewFileDialog)
-        }
-    }
-}
-
-struct BaseFolderTab: View {
-    @EnvironmentObject var noteStore: NoteStore
-    let project: ProjectFolder
-    let isActive: Bool
-
-    var body: some View {
-        Button(action: { noteStore.selectProject(project.id) }) {
-            HStack(spacing: 6) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.green.opacity(0.8))
-
-                Text(project.name)
-                    .font(.system(size: 11, weight: isActive ? .bold : .medium))
-                    .foregroundStyle(.white.opacity(isActive ? 0.95 : 0.6))
-                    .lineLimit(1)
-
-                if let root = project.rootFolder {
-                    Text("\(root.docFileCount)")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.25))
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isActive ? Color.green.opacity(0.15) : .white.opacity(0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(isActive ? Color.green.opacity(0.5) : Color.green.opacity(0.2), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct NewFileDialog: View {
-    @EnvironmentObject var noteStore: NoteStore
-    @Binding var isPresented: Bool
-    @State private var fileName = ""
-    @FocusState private var isFocused: Bool
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("새 문서 만들기")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(.white)
-
-            TextField("파일명 (예: my-note.md)", text: $fileName)
-                .textFieldStyle(.roundedBorder)
-                .focused($isFocused)
-                .onSubmit { create() }
-
-            HStack(spacing: 12) {
-                Button("취소") { isPresented = false }
-                    .keyboardShortcut(.cancelAction)
-
-                Button("만들기") { create() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(fileName.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
-        .padding(24)
-        .frame(width: 320)
-        .onAppear { isFocused = true }
-    }
-
-    private func create() {
-        if noteStore.createNewFile(name: fileName) != nil {
-            isPresented = false
-        }
-    }
-}
-
-struct AllProjectsTab: View {
-    @EnvironmentObject var noteStore: NoteStore
-
-    private var isActive: Bool { noteStore.selectedProjectId == nil }
-
-    var body: some View {
-        Button(action: { noteStore.selectProject(nil) }) {
-            HStack(spacing: 6) {
-                Image(systemName: "brain")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.cyan.opacity(0.7))
-
-                Text("All")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(isActive ? 0.9 : 0.5))
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isActive ? Color.cyan.opacity(0.15) : .white.opacity(0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(isActive ? Color.cyan.opacity(0.4) : .clear, lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-struct ProjectTab: View {
-    let project: ProjectFolder
-    let isActive: Bool
-    let onTap: () -> Void
-    let onRemove: () -> Void
-    var onRename: ((String) -> Void)? = nil
-    @State private var isHovered = false
-    @State private var isEditing = false
-    @State private var editName = ""
-    @FocusState private var isFieldFocused: Bool
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(projectColor)
-                    .frame(width: 6, height: 6)
-
-                if isEditing {
-                    TextField("", text: $editName)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white)
-                        .focused($isFieldFocused)
-                        .frame(minWidth: 60, maxWidth: 140)
-                        .onSubmit { commitRename() }
-                        .onExitCommand { cancelRename() }
-                } else {
-                    Text(project.name)
-                        .font(.system(size: 11, weight: isActive ? .bold : .medium))
-                        .foregroundStyle(.white.opacity(isActive ? 0.95 : 0.7))
-                        .lineLimit(1)
-                }
-
-                if let root = project.rootFolder, !isEditing {
-                    Text("\(root.docFileCount)")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.25))
-                }
-
-                if isHovered && !isEditing {
-                    Button(action: onRemove) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.3))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isActive ? projectColor.opacity(0.15) : .white.opacity(isHovered ? 0.08 : 0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(isEditing ? Color.cyan.opacity(0.6) : (isActive ? projectColor.opacity(0.5) : projectColor.opacity(0.3)), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
-        .onTapGesture(count: 2) {
-            startEditing()
-        }
-        .onTapGesture(count: 1) {
-            onTap()
-        }
-    }
-
-    private func startEditing() {
-        editName = project.name
-        isEditing = true
-        isFieldFocused = true
-    }
-
-    private func commitRename() {
-        let trimmed = editName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            onRename?(trimmed)
-        }
-        isEditing = false
-    }
-
-    private func cancelRename() {
-        isEditing = false
-    }
-
-    private var projectColor: Color {
-        let hash = abs(project.path.hashValue)
-        let hue = Double(hash % 360) / 360.0
-        return Color(hue: hue, saturation: 0.6, brightness: 0.8)
-    }
-}
-
-// MARK: - Top Bar
-
-struct TopBar: View {
+struct MainTopBar: View {
     @EnvironmentObject var noteStore: NoteStore
     @EnvironmentObject var backendManager: BackendManager
     @EnvironmentObject var handTracking: HandTrackingManager
-    @Binding var viewMode: ViewMode
-    @Binding var showBottomTerminal: Bool
-    @Binding var isFullTerminal: Bool
+    let viewMode: ViewMode
 
     var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 6) {
+        HStack(spacing: SB.Space.md) {
+            // Left: SBrain + project info
+            HStack(spacing: SB.Space.sm) {
                 Circle()
-                    .fill(backendManager.isRunning ? Color.cyan : Color.red)
-                    .frame(width: 8, height: 8)
-                    .shadow(color: backendManager.isRunning ? .cyan.opacity(0.6) : .clear, radius: 4)
+                    .fill(backendManager.isRunning ? SB.Colors.accentGreen : SB.Colors.accentRed)
+                    .frame(width: 7, height: 7)
 
                 Text("SBrain")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(
                         .linearGradient(
-                            colors: [.cyan, .purple],
+                            colors: [SB.Colors.navy700, SB.Colors.gold600],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
-            }
 
-            if noteStore.hasProjects {
-                Text("\(noteStore.projects.count) projects · \(noteStore.totalDocCount) files")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.3))
+                // Breadcrumb
+                if let project = noteStore.selectedProject {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8))
+                        .foregroundStyle(SB.Colors.navy300)
+                    Text(project.name)
+                        .font(SB.Font.bodySm())
+                        .foregroundStyle(SB.Colors.navy500)
+                }
             }
 
             Spacer()
 
+            // Center: Search bar
             RecallBar()
 
             Spacer()
 
-            // View mode toggle + terminal button
-            HStack(spacing: 2) {
-                ForEach(ViewMode.allCases, id: \.self) { mode in
-                    Button(action: {
-                        if isFullTerminal { isFullTerminal = false }
-                        viewMode = mode
-                    }) {
-                        Image(systemName: mode.icon)
-                            .font(.system(size: 12))
-                            .frame(width: 28, height: 22)
-                            .background(
-                                viewMode == mode && !isFullTerminal
-                                    ? Color.white.opacity(0.15)
-                                    : Color.clear
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(viewMode == mode && !isFullTerminal ? .white : .white.opacity(0.4))
-                    .help(mode.label)
-                }
-
-                // Terminal toggle button (part of the mode group)
-                Button(action: {
-                    if isFullTerminal {
-                        // Exit full terminal → show as bottom panel
-                        isFullTerminal = false
-                        showBottomTerminal = true
-                    } else {
-                        showBottomTerminal.toggle()
-                    }
-                }) {
-                    Image(systemName: "terminal")
-                        .font(.system(size: 12))
-                        .frame(width: 28, height: 22)
-                        .background(
-                            (showBottomTerminal || isFullTerminal)
-                                ? Color.orange.opacity(0.2)
-                                : Color.clear
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle((showBottomTerminal || isFullTerminal) ? .orange : .white.opacity(0.4))
-                .help(showBottomTerminal ? "터미널 닫기" : "터미널 열기")
+            // Right: Status + controls
+            if noteStore.hasProjects {
+                Text("\(noteStore.projects.count) projects · \(noteStore.totalDocCount) files")
+                    .font(SB.Font.monoSm())
+                    .foregroundStyle(SB.Colors.navy300)
             }
-            .padding(2)
-            .background(.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
 
             // Hand tracking toggle
             Button(action: { handTracking.isEnabled.toggle() }) {
                 Image(systemName: handTracking.isEnabled ? "hand.raised.fill" : "hand.raised")
-                    .font(.system(size: 12))
-                    .padding(6)
+                    .font(.system(size: 11))
+                    .padding(5)
                     .background(handTracking.isEnabled
-                        ? (handTracking.isTracking ? Color.green.opacity(0.2) : Color.orange.opacity(0.15))
-                        : .white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(handTracking.isEnabled ? Color.green.opacity(0.4) : .clear, lineWidth: 1)
-                    )
+                        ? (handTracking.isTracking ? SB.Colors.accentGreen.opacity(0.15) : SB.Colors.accentOrange.opacity(0.15))
+                        : SB.Colors.bgTertiary)
+                    .clipShape(RoundedRectangle(cornerRadius: SB.Radius.sm))
             }
             .buttonStyle(.plain)
             .foregroundStyle(handTracking.isEnabled
-                ? (handTracking.isTracking ? .green : .orange)
-                : .white.opacity(0.6))
+                ? (handTracking.isTracking ? SB.Colors.accentGreen : SB.Colors.accentOrange)
+                : SB.Colors.navy500)
             .help(handTracking.isEnabled ? "손 추적 끄기" : "손 추적 켜기")
             .opacity(handTracking.cameraAuthorized ? 1 : 0.3)
             .disabled(!handTracking.cameraAuthorized && !handTracking.isEnabled)
-
-            // Add folder button
-            Button(action: { noteStore.addFolder() }) {
-                Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 12))
-                    .padding(6)
-                    .background(.white.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.white.opacity(0.6))
-            .help("프로젝트 추가")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color.black.opacity(0.3))
+        .padding(.horizontal, SB.Space.lg)
+        .padding(.vertical, SB.Space.sm)
+        .frame(height: SB.Layout.topBarHeight)
+        .background(SB.Colors.bgElevated)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(SB.Colors.navy100).frame(height: 1)
+        }
     }
 }
 
-// MARK: - Recall Bar (Search)
+// MARK: - Recall Bar (Search in Top Bar)
 
 struct RecallBar: View {
     @EnvironmentObject var noteStore: NoteStore
 
     var body: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkle.magnifyingglass")
-                    .foregroundStyle(noteStore.isSearchActive ? .yellow.opacity(0.8) : .cyan.opacity(0.6))
-                    .font(.system(size: 12))
+        HStack(spacing: SB.Space.sm) {
+            Image(systemName: "sparkle.magnifyingglass")
+                .foregroundStyle(noteStore.isSearchActive ? SB.Colors.gold600 : SB.Colors.navy300)
+                .font(.system(size: 11))
 
-                TextField("회상하기...", text: $noteStore.searchQuery)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white)
-                    .onSubmit {
-                        Task { await noteStore.recall() }
-                    }
-
-                if noteStore.isSearchActive {
-                    Text("\(noteStore.filteredSearchResults.count)")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.yellow)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Color.yellow.opacity(0.15))
-                        .clipShape(Capsule())
+            TextField("회상하기...", text: $noteStore.searchQuery)
+                .textFieldStyle(.plain)
+                .font(SB.Font.bodySm())
+                .foregroundStyle(SB.Colors.navy900)
+                .onSubmit {
+                    Task { await noteStore.recall() }
                 }
 
-                if !noteStore.searchQuery.isEmpty {
-                    Button(action: { noteStore.clearSearch() }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.white.opacity(0.3))
-                            .font(.system(size: 10))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                if noteStore.isSearching {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .tint(.cyan)
-                }
+            if noteStore.isSearchActive {
+                Text("\(noteStore.filteredSearchResults.count)")
+                    .font(SB.Font.monoSm())
+                    .foregroundStyle(SB.Colors.gold600)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(SB.Colors.gold100)
+                    .clipShape(Capsule())
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(noteStore.isSearchActive ? Color.yellow.opacity(0.06) : .white.opacity(0.06))
-            .clipShape(Capsule())
 
-            // Error / empty result message
-            if let error = noteStore.searchError, !noteStore.isSearching {
-                Text(error)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
+            if !noteStore.searchQuery.isEmpty {
+                Button(action: { noteStore.clearSearch() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(SB.Colors.navy300)
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if noteStore.isSearching {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .tint(SB.Colors.gold600)
             }
         }
-        .frame(maxWidth: 320)
+        .padding(.horizontal, SB.Space.md)
+        .padding(.vertical, SB.Space.xs + 2)
+        .background(noteStore.isSearchActive ? SB.Colors.gold100.opacity(0.5) : SB.Colors.bgSecondary)
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(SB.Colors.navy100, lineWidth: 1)
+        )
+        .frame(maxWidth: 280)
     }
 }
 
@@ -669,9 +349,9 @@ struct MemorizeProgressView: View {
     let status: IngestStatus
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: SB.Space.md) {
             Image(systemName: "brain")
-                .foregroundStyle(.purple)
+                .foregroundStyle(SB.Colors.gold600)
                 .font(.system(size: 12))
                 .symbolEffect(.pulse)
 
@@ -679,28 +359,28 @@ struct MemorizeProgressView: View {
                 ProgressView(value: Double(status.done), total: Double(status.total))
                     .tint(
                         LinearGradient(
-                            colors: [.purple, .cyan],
+                            colors: [SB.Colors.navy700, SB.Colors.gold600],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
                     )
 
                 Text("\(status.done)/\(status.total)")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(SB.Font.monoSm())
+                    .foregroundStyle(SB.Colors.navy500)
             } else {
                 Text("뇌 활성화 중...")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .font(SB.Font.bodySm())
+                    .foregroundStyle(SB.Colors.navy500)
 
                 ProgressView()
                     .scaleEffect(0.5)
-                    .tint(.purple)
+                    .tint(SB.Colors.gold600)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(Color.purple.opacity(0.1))
+        .padding(.horizontal, SB.Space.lg)
+        .padding(.vertical, SB.Space.sm)
+        .background(SB.Colors.gold600.opacity(0.08))
     }
 }
 
@@ -717,38 +397,37 @@ struct BottomTerminalPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             // Drag handle / header
-            HStack(spacing: 8) {
-                // Drag handle
+            HStack(spacing: SB.Space.sm) {
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(.white.opacity(0.2))
+                    .fill(SB.Colors.navy300)
                     .frame(width: 36, height: 3)
 
                 Spacer()
 
                 Text("터미널")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .font(SB.Font.caption())
+                    .foregroundStyle(SB.Colors.navy500)
 
                 if !terminalManager.sessions.isEmpty {
                     Text("\(terminalManager.sessions.count)")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.orange)
+                        .font(SB.Font.monoSm())
+                        .foregroundStyle(SB.Colors.gold600)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 1)
-                        .background(Color.orange.opacity(0.15))
+                        .background(SB.Colors.gold100)
                         .clipShape(Capsule())
                 }
 
                 Spacer()
 
-                // Maximize — switch to full terminal view
+                // Maximize
                 Button(action: {
                     showBottomTerminal = false
                     isFullTerminal = true
                 }) {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
                         .font(.system(size: 9))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(SB.Colors.navy500)
                 }
                 .buttonStyle(.plain)
                 .help("전체 터미널로 전환")
@@ -757,20 +436,20 @@ struct BottomTerminalPanel: View {
                 Button(action: { showBottomTerminal = false }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(SB.Colors.navy500)
                 }
                 .buttonStyle(.plain)
                 .help("터미널 패널 닫기")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(Color.black.opacity(0.5))
+            .padding(.horizontal, SB.Space.md)
+            .padding(.vertical, SB.Space.xs)
+            .background(SB.Colors.bgSecondary)
             .gesture(
                 DragGesture()
                     .onChanged { value in
                         isDragging = true
                         let newHeight = height - value.translation.height
-                        height = max(120, min(500, newHeight))
+                        height = max(SB.Layout.terminalMinHeight, min(SB.Layout.terminalMaxHeight, newHeight))
                     }
                     .onEnded { _ in isDragging = false }
             )
@@ -784,10 +463,10 @@ struct BottomTerminalPanel: View {
 
             // Divider
             Rectangle()
-                .fill(Color.orange.opacity(0.3))
+                .fill(SB.Colors.gold600.opacity(0.3))
                 .frame(height: 1)
 
-            // Terminal content — reuse TerminalContainerView
+            // Terminal content
             TerminalContainerView()
         }
         .frame(height: height)

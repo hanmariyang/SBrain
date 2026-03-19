@@ -25,6 +25,8 @@ struct SBrainApp: App {
                 .environmentObject(terminalManager)
                 .onAppear {
                     backendManager.start()
+                    // 앱 시작 2초 후 업데이트 자동 확인
+                    checkForUpdatesOnLaunch()
                 }
         }
         .windowStyle(.hiddenTitleBar)
@@ -37,6 +39,15 @@ struct SBrainApp: App {
             }
             CommandGroup(after: .appInfo) {
                 CheckForUpdatesView(updater: updaterController.updater)
+            }
+        }
+    }
+    /// 앱 시작 시 Sparkle 업데이트 자동 확인
+    private func checkForUpdatesOnLaunch() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            let updater = updaterController.updater
+            if updater.canCheckForUpdates {
+                updater.checkForUpdatesInBackground()
             }
         }
     }

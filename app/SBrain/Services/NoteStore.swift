@@ -29,6 +29,10 @@ class NoteStore: ObservableObject {
     private var pollTimer: Timer?
     private let savedProjectsKey = "SBrain.projectPaths"
     private let savedProjectNamesKey = "SBrain.projectNames"
+    private let baseFolderPathKey = "SBrain.baseFolderPath"
+
+    /// Base folder path (~/Documents/SBrain/ by default)
+    @Published var baseFolderPath: String = ""
 
     var totalDocCount: Int {
         projects.reduce(0) { $0 + ($1.rootFolder?.docFileCount ?? 0) }
@@ -190,7 +194,12 @@ class NoteStore: ObservableObject {
     }
 
     func restoreProjects() {
-        guard let paths = UserDefaults.standard.stringArray(forKey: savedProjectsKey) else { return }
+        initBaseFolder()
+
+        guard let paths = UserDefaults.standard.stringArray(forKey: savedProjectsKey) else {
+            rebuildGraph()
+            return
+        }
         let savedNames = UserDefaults.standard.dictionary(forKey: savedProjectNamesKey) as? [String: String] ?? [:]
         for path in paths {
             guard FileManager.default.fileExists(atPath: path) else { continue }
@@ -209,9 +218,120 @@ class NoteStore: ObservableObject {
     }
 
     private func saveProjectPaths() {
-        UserDefaults.standard.set(projects.map(\.path), forKey: savedProjectsKey)
-        let names = Dictionary(uniqueKeysWithValues: projects.map { ($0.path, $0.name) })
+        let nonBase = projects.filter { !$0.isBaseFolder }
+        UserDefaults.standard.set(nonBase.map(\.path), forKey: savedProjectsKey)
+        let names = Dictionary(uniqueKeysWithValues: nonBase.map { ($0.path, $0.name) })
         UserDefaults.standard.set(names, forKey: savedProjectNamesKey)
+    }
+
+    // MARK: - Base Folder (Personal Workspace)
+
+    private func initBaseFolder() {
+        let saved = UserDefaults.standard.string(forKey: baseFolderPathKey)
+        let defaultPath = (NSHomeDirectory() as NSString).appendingPathComponent("Documents/SBrain")
+        baseFolderPath = saved ?? defaultPath
+
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: baseFolderPath) {
+            try? fm.createDirectory(atPath: baseFolderPath, withIntermediateDirectories: true)
+            // Create welcome file so the folder isn't empty
+            let welcomePath = (baseFolderPath as NSString).appendingPathComponent("Welcome.md")
+            let welcomeContent = "# Welcome to SBrain\n\nSBrain 기본 폴더입니다. 여기에 자유롭게 문서를 작성하세요.\n"
+            fm.createFile(atPath: welcomePath, contents: welcomeContent.data(using: .utf8))
+        }
+
+        UserDefaults.standard.set(baseFolderPath, forKey: baseFolderPathKey)
+
+        guard !projects.contains(where: { $0.isBaseFolder }) else { return }
+
+        let root = FolderScanner.scan(at: baseFolderPath)
+            ?? FolderNode(name: "SBrain", path: baseFolderPath, isFolder: true, children: [])
+        let project = ProjectFolder(path: baseFolderPath, name: "내 기억", rootFolder: root, isBaseFolder: true)
+        projects.insert(project, at: 0)
+    }
+
+    func isInBaseFolder(_ path: String) -> Bool {
+        !baseFolderPath.isEmpty && path.hasPrefix(baseFolderPath)
+    }
+
+    func refreshBaseFolder() {
+        guard let idx = projects.firstIndex(where: { $0.isBaseFolder }) else { return }
+        let root = FolderScanner.scan(at: baseFolderPath)
+            ?? FolderNode(name: "SBrain", path: baseFolderPath, isFolder: true, children: [])
+        let old = projects[idx]
+        projects[idx] = ProjectFolder(path: old.path, name: old.name, rootFolder: root, isBaseFolder: true)
+        rebuildGraph()
+    }
+
+    func createNewFile(name: String) -> String? {
+        var fileName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !fileName.isEmpty else { return nil }
+
+        // Ensure .md extension
+        if !(fileName as NSString).pathExtension.lowercased().contains("md") &&
+           !(fileName as NSString).pathExtension.lowercased().contains("html") {
+            fileName += ".md"
+        }
+
+        let filePath = (baseFolderPath as NSString).appendingPathComponent(fileName)
+
+        // Avoid overwriting
+        if FileManager.default.fileExists(atPath: filePath) { return nil }
+
+        let initialContent = "# \((fileName as NSString).deletingPathExtension)\n\n"
+        FileManager.default.createFile(atPath: filePath, contents: initialContent.data(using: .utf8))
+        refreshBaseFolder()
+        selectFile(path: filePath)
+        return filePath
+    }
+
+    func saveFileContent(path: String, content: String) {
+        guard isInBaseFolder(path) else { return }
+        try? content.write(toFile: path, atomically: true, encoding: .utf8)
+        selectedFileContent = content
+        refreshBaseFolder()
+    }
+
+    func copyToBaseFolder(sourcePath: String) {
+        // Determine source project name for subfolder
+        let projectName = projects.first { !$0.isBaseFolder && sourcePath.hasPrefix($0.path) }?.name ?? "Imported"
+        let destDir = (baseFolderPath as NSString).appendingPathComponent(projectName)
+        let fm = FileManager.default
+
+        if !fm.fileExists(atPath: destDir) {
+            try? fm.createDirectory(atPath: destDir, withIntermediateDirectories: true)
+        }
+
+        let fileName = (sourcePath as NSString).lastPathComponent
+        var destPath = (destDir as NSString).appendingPathComponent(fileName)
+
+        // Handle duplicate names
+        if fm.fileExists(atPath: destPath) {
+            let name = (fileName as NSString).deletingPathExtension
+            let ext = (fileName as NSString).pathExtension
+            var counter = 1
+            repeat {
+                destPath = (destDir as NSString).appendingPathComponent("\(name)_\(counter).\(ext)")
+                counter += 1
+            } while fm.fileExists(atPath: destPath)
+        }
+
+        try? fm.copyItem(atPath: sourcePath, toPath: destPath)
+        refreshBaseFolder()
+    }
+
+    func deleteFile(path: String) {
+        guard isInBaseFolder(path) else { return }
+        try? FileManager.default.removeItem(atPath: path)
+        if selectedFilePath == path {
+            selectedFilePath = nil
+            selectedFileContent = nil
+        }
+        refreshBaseFolder()
+    }
+
+    func openInExternalEditor(path: String) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 
     // Legacy compat: selectFolder maps to addFolder
@@ -359,4 +479,12 @@ struct ProjectFolder: Identifiable {
     let path: String
     var name: String
     let rootFolder: FolderNode?
+    let isBaseFolder: Bool
+
+    init(path: String, name: String, rootFolder: FolderNode?, isBaseFolder: Bool = false) {
+        self.path = path
+        self.name = name
+        self.rootFolder = rootFolder
+        self.isBaseFolder = isBaseFolder
+    }
 }

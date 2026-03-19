@@ -15,6 +15,10 @@ struct MemoryDetailView: View {
     @EnvironmentObject var handTracking: HandTrackingManager
     @StateObject private var scrollProxy = WebViewScrollProxy()
     @State private var isResultsCollapsed = false
+    @State private var isEditing = false
+    @State private var editContent = ""
+    @State private var saveDebounce: Task<Void, Never>?
+    @State private var showCopiedToast = false
 
     private var searchTerms: [String] {
         guard noteStore.isSearchActive else { return [] }
@@ -25,9 +29,14 @@ struct MemoryDetailView: View {
             .filter { $0.count >= 1 }
     }
 
+    private var isBaseFile: Bool {
+        guard let path = noteStore.selectedFilePath else { return false }
+        return noteStore.isInBaseFolder(path)
+    }
+
     var body: some View {
         ZStack {
-            Color(nsColor: NSColor(red: 0.06, green: 0.06, blue: 0.1, alpha: 1))
+            SB.Colors.bgPrimary
 
             VStack(spacing: 0) {
                 // Search results strip (shown when search is active)
@@ -44,20 +53,22 @@ struct MemoryDetailView: View {
                    let fileName = noteStore.selectedFileName {
                     detailHeader(fileName: fileName)
 
-                    // Gradient divider
+                    // Divider
                     Rectangle()
                         .fill(
                             LinearGradient(
-                                colors: [.cyan.opacity(0.4), .purple.opacity(0.4), .clear],
+                                colors: [isEditing ? SB.Colors.accentGreen.opacity(0.6) : SB.Colors.gold600.opacity(0.4), SB.Colors.navy100, .clear],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                         .frame(height: 1)
 
-                    // Render based on file type
-                    if let path = noteStore.selectedFilePath,
-                       FolderScanner.fileType(for: path) == .html {
+                    if isEditing && isBaseFile {
+                        // Edit mode: raw text editor
+                        MarkdownEditor(content: $editContent, onSave: { saveEdits() })
+                    } else if let path = noteStore.selectedFilePath,
+                              FolderScanner.fileType(for: path) == .html {
                         HTMLWebView(html: content, basePath: path, highlightTerms: searchTerms, scrollProxy: scrollProxy)
                     } else {
                         MarkdownWebView(markdown: content, highlightTerms: searchTerms, scrollProxy: scrollProxy)
@@ -68,13 +79,13 @@ struct MemoryDetailView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "hand.point.up.left.and.text")
                             .font(.system(size: 32))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(SB.Colors.navy300)
                         Text("\(noteStore.multiSelectedPaths.count)개 선택됨")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(SB.Colors.navy500)
                         Text("위 목록에서 항목을 선택하거나 4손가락 스와이프로 탐색")
                             .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.25))
+                            .foregroundStyle(SB.Colors.navy300)
                     }
                     Spacer()
                 } else if noteStore.isSearchActive {
@@ -83,24 +94,45 @@ struct MemoryDetailView: View {
                     emptyState
                 }
             }
-            // Hand gesture: victory (✌️) joystick scroll
-            // scrollSpeed is position-based: hold hand higher = scroll up, lower = scroll down
-            .onChange(of: handTracking.scrollSpeed) { _, speed in
-                guard handTracking.gestureTarget == .viewer,
-                      handTracking.mode == .scrolling,
-                      noteStore.selectedFileContent != nil,
-                      abs(speed) > 0.01 else { return }
-                scrollProxy.scrollBy(deltaY: speed * 8)
+
+            // Copied toast
+            if showCopiedToast {
+                VStack {
+                    Spacer()
+                    Text("기본 폴더에 저장됨")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(SB.Colors.navy900)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(SB.Colors.accentGreen)
+                        .clipShape(Capsule())
+                        .padding(.bottom, 20)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            // Hand gesture: fourFingers swipe browses multi-selected
-            .onChange(of: handTracking.didSwipeRight) { _, swiped in
-                guard handTracking.gestureTarget == .viewer else { return }
-                if swiped { noteStore.browseNext() }
-            }
-            .onChange(of: handTracking.didSwipeLeft) { _, swiped in
-                guard handTracking.gestureTarget == .viewer else { return }
-                if swiped { noteStore.browsePrevious() }
-            }
+        }
+        // Hand gesture: victory (✌️) joystick scroll
+        // scrollSpeed is position-based: hold hand higher = scroll up, lower = scroll down
+        .onChange(of: handTracking.scrollSpeed) { _, speed in
+            guard handTracking.gestureTarget == .viewer,
+                  handTracking.mode == .scrolling,
+                  noteStore.selectedFileContent != nil,
+                  abs(speed) > 0.01 else { return }
+            scrollProxy.scrollBy(deltaY: speed * 8)
+        }
+        // Hand gesture: fourFingers swipe browses multi-selected
+        .onChange(of: handTracking.didSwipeRight) { _, swiped in
+            guard handTracking.gestureTarget == .viewer else { return }
+            if swiped { noteStore.browseNext() }
+        }
+        .onChange(of: handTracking.didSwipeLeft) { _, swiped in
+            guard handTracking.gestureTarget == .viewer else { return }
+            if swiped { noteStore.browsePrevious() }
+        }
+        // Reset edit mode when file changes
+        .onChange(of: noteStore.selectedFilePath) { _, _ in
+            isEditing = false
+            editContent = ""
         }
     }
 
@@ -112,7 +144,7 @@ struct MemoryDetailView: View {
             Button(action: { noteStore.browsePrevious() }) {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(SB.Colors.navy500)
                     .frame(width: 24, height: 28)
             }
             .buttonStyle(.plain)
@@ -126,7 +158,7 @@ struct MemoryDetailView: View {
                         HStack(spacing: 4) {
                             Text(name)
                                 .font(.system(size: 10, weight: isCurrent ? .bold : .regular, design: .monospaced))
-                                .foregroundStyle(isCurrent ? .white : .white.opacity(0.5))
+                                .foregroundStyle(isCurrent ? SB.Colors.navy900 : SB.Colors.navy500)
                                 .lineLimit(1)
                                 .onTapGesture {
                                     noteStore.browseIndex = idx
@@ -136,7 +168,7 @@ struct MemoryDetailView: View {
                             // Remove button — separate from text tap area
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 10))
-                                .foregroundStyle(.white.opacity(0.3))
+                                .foregroundStyle(SB.Colors.navy300)
                                 .onTapGesture {
                                     noteStore.toggleMultiSelect(path: path)
                                 }
@@ -145,11 +177,11 @@ struct MemoryDetailView: View {
                         .padding(.vertical, 4)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(isCurrent ? Color.cyan.opacity(0.2) : Color.white.opacity(0.05))
+                                .fill(isCurrent ? SB.Colors.gold100 : SB.Colors.bgTertiary)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
-                                .strokeBorder(isCurrent ? Color.cyan.opacity(0.4) : Color.clear, lineWidth: 1)
+                                .strokeBorder(isCurrent ? SB.Colors.gold600.opacity(0.4) : Color.clear, lineWidth: 1)
                         )
                     }
                 }
@@ -160,7 +192,7 @@ struct MemoryDetailView: View {
             Button(action: { noteStore.browseNext() }) {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(SB.Colors.navy500)
                     .frame(width: 24, height: 28)
             }
             .buttonStyle(.plain)
@@ -170,39 +202,39 @@ struct MemoryDetailView: View {
             // Counter
             Text("\(noteStore.browseIndex + 1)/\(noteStore.multiSelectedPaths.count)")
                 .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.3))
+                .foregroundStyle(SB.Colors.navy300)
                 .padding(.trailing, 8)
 
             // Clear all
             Button(action: { noteStore.clearMultiSelection() }) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(SB.Colors.navy300)
             }
             .buttonStyle(.plain)
             .padding(.trailing, 8)
         }
         .frame(height: 32)
-        .background(Color(red: 0.08, green: 0.08, blue: 0.14))
+        .background(SB.Colors.bgSecondary)
     }
 
     private func detailHeader(fileName: String) -> some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
-                Text((fileName as NSString).deletingPathExtension)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(
-                        .linearGradient(
-                            colors: [.white, .white.opacity(0.7)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                HStack(spacing: 8) {
+                    Text((fileName as NSString).deletingPathExtension)
+                        .font(SB.Font.titleLg())
+                        .foregroundStyle(SB.Colors.navy900)
+
+                    if isEditing {
+                        SBBadge(text: "편집 중", color: SB.Colors.accentGreen)
+                    }
+                }
 
                 if let path = noteStore.selectedFilePath {
                     Text(path)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.2))
+                        .font(SB.Font.monoSm())
+                        .foregroundStyle(SB.Colors.navy300)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -210,32 +242,131 @@ struct MemoryDetailView: View {
 
             Spacer()
 
-            Button(action: {
-                noteStore.selectedFilePath = nil
-                noteStore.selectedFileContent = nil
-            }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(width: 24, height: 24)
-                    .background(.white.opacity(0.08))
-                    .clipShape(Circle())
+            HStack(spacing: 6) {
+                // Edit/Preview toggle (base folder files only, markdown only)
+                if isBaseFile,
+                   let path = noteStore.selectedFilePath,
+                   FolderScanner.fileType(for: path) == .markdown {
+                    Button(action: { toggleEdit() }) {
+                        Image(systemName: isEditing ? "eye" : "pencil")
+                            .font(.system(size: 10))
+                            .foregroundStyle(isEditing ? SB.Colors.accentBlue : SB.Colors.accentGreen)
+                            .frame(width: 24, height: 24)
+                            .background(isEditing ? SB.Colors.accentBlue.opacity(0.1) : SB.Colors.accentGreen.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(isEditing ? "미리보기" : "편집")
+                }
+
+                // Save to base folder (project files only, not base folder)
+                if !isBaseFile, noteStore.selectedFilePath != nil {
+                    Button(action: { copyCurrentToBase() }) {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 10))
+                            .foregroundStyle(SB.Colors.accentGreen)
+                            .frame(width: 24, height: 24)
+                            .background(SB.Colors.accentGreen.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("기본 폴더에 저장")
+                }
+
+                // Open in external editor
+                if noteStore.selectedFilePath != nil {
+                    Button(action: {
+                        if let path = noteStore.selectedFilePath {
+                            noteStore.openInExternalEditor(path: path)
+                        }
+                    }) {
+                        Image(systemName: "arrow.up.forward.app")
+                            .font(.system(size: 10))
+                            .foregroundStyle(SB.Colors.navy500)
+                            .frame(width: 24, height: 24)
+                            .background(SB.Colors.bgTertiary)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("외부 에디터로 열기")
+                }
+
+                // Delete (base folder files only)
+                if isBaseFile {
+                    Button(action: {
+                        if let path = noteStore.selectedFilePath {
+                            noteStore.deleteFile(path: path)
+                            isEditing = false
+                        }
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(SB.Colors.accentRed)
+                            .frame(width: 24, height: 24)
+                            .background(SB.Colors.accentRed.opacity(0.1))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("삭제")
+                }
+
+                // Close
+                Button(action: {
+                    isEditing = false
+                    noteStore.selectedFilePath = nil
+                    noteStore.selectedFileContent = nil
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10))
+                        .foregroundStyle(SB.Colors.navy500)
+                        .frame(width: 24, height: 24)
+                        .background(SB.Colors.bgTertiary)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
+    }
+
+    private func toggleEdit() {
+        if isEditing {
+            // Switching to preview: save first
+            if let path = noteStore.selectedFilePath {
+                noteStore.saveFileContent(path: path, content: editContent)
+            }
+            isEditing = false
+        } else {
+            // Switching to edit
+            editContent = noteStore.selectedFileContent ?? ""
+            isEditing = true
+        }
+    }
+
+    private func saveEdits() {
+        guard let path = noteStore.selectedFilePath else { return }
+        noteStore.saveFileContent(path: path, content: editContent)
+    }
+
+    private func copyCurrentToBase() {
+        guard let path = noteStore.selectedFilePath else { return }
+        noteStore.copyToBaseFolder(sourcePath: path)
+        withAnimation { showCopiedToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation { showCopiedToast = false }
+        }
     }
 
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 40))
-                .foregroundStyle(.white.opacity(0.12))
+                .foregroundStyle(SB.Colors.navy100)
 
             Text("파일을 선택하면 여기에 미리보기가 표시됩니다")
                 .font(.system(size: 13))
-                .foregroundStyle(.white.opacity(0.25))
+                .foregroundStyle(SB.Colors.navy300)
         }
     }
 }
@@ -256,10 +387,10 @@ struct RecallResultListView: View {
                 HStack {
                     Image(systemName: "hand.point.up.left")
                         .font(.system(size: 11))
-                        .foregroundStyle(.yellow.opacity(0.5))
+                        .foregroundStyle(SB.Colors.gold600.opacity(0.7))
                     Text("결과를 클릭하면 문서를 미리 볼 수 있습니다")
                         .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(SB.Colors.navy300)
                     Spacer()
                 }
                 .padding(.horizontal, 20)
@@ -284,10 +415,10 @@ struct RecallResultListView: View {
                 // Score bar
                 ZStack(alignment: .bottom) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(.white.opacity(0.06))
+                        .fill(SB.Colors.bgTertiary)
                         .frame(width: 4, height: 32)
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.yellow.opacity(0.6))
+                        .fill(SB.Colors.gold400)
                         .frame(width: 4, height: max(4, 32 * result.score))
                 }
 
@@ -295,35 +426,35 @@ struct RecallResultListView: View {
                     HStack(spacing: 6) {
                         Text(fileExt.isEmpty ? "MD" : fileExt)
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.yellow.opacity(0.8))
+                            .foregroundStyle(SB.Colors.gold600)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(Color.yellow.opacity(0.12))
+                            .background(SB.Colors.gold100)
                             .clipShape(RoundedRectangle(cornerRadius: 3))
 
                         Text((result.filename as NSString).deletingPathExtension)
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(SB.Colors.navy900)
                             .lineLimit(1)
 
                         Spacer()
 
                         Text("\(Int(result.score * 100))%")
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(.yellow.opacity(0.5))
+                            .foregroundStyle(SB.Colors.gold600.opacity(0.7))
                     }
 
                     if !result.chunkText.isEmpty {
                         Text(result.chunkText)
                             .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(SB.Colors.navy500)
                             .lineLimit(2)
                     }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(Color.white.opacity(0.02))
+            .background(SB.Colors.bgSecondary.opacity(0.5))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -353,20 +484,20 @@ struct RecallResultStrip: View {
             HStack(spacing: 8) {
                 Image(systemName: "brain.head.profile")
                     .font(.system(size: 11))
-                    .foregroundStyle(.yellow.opacity(0.8))
+                    .foregroundStyle(SB.Colors.gold600)
 
                 Text("회상 결과 \(results.count)건")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.yellow.opacity(0.9))
+                    .foregroundStyle(SB.Colors.gold600)
 
                 Spacer()
 
                 Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isCollapsed.toggle() } }) {
                     Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(SB.Colors.navy500)
                         .frame(width: 20, height: 20)
-                        .background(.white.opacity(0.06))
+                        .background(SB.Colors.bgTertiary)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
@@ -374,16 +505,16 @@ struct RecallResultStrip: View {
                 Button(action: { noteStore.clearSearch() }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(SB.Colors.navy500)
                         .frame(width: 20, height: 20)
-                        .background(.white.opacity(0.06))
+                        .background(SB.Colors.bgTertiary)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            .background(Color.yellow.opacity(0.06))
+            .background(SB.Colors.gold100.opacity(0.5))
 
             // Expanded: horizontal scrollable result chips
             if !isCollapsed {
@@ -396,12 +527,12 @@ struct RecallResultStrip: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                 }
-                .background(Color.yellow.opacity(0.03))
+                .background(SB.Colors.gold100.opacity(0.3))
             }
 
             // Divider
             Rectangle()
-                .fill(Color.yellow.opacity(0.15))
+                .fill(SB.Colors.gold100)
                 .frame(height: 1)
         }
     }
@@ -417,31 +548,31 @@ struct RecallResultStrip: View {
                 // File type badge
                 Text(fileExt.isEmpty ? "MD" : fileExt)
                     .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundStyle(isSelected ? .black : .yellow.opacity(0.7))
+                    .foregroundStyle(isSelected ? .black : SB.Colors.gold400)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
-                    .background(isSelected ? Color.yellow : Color.yellow.opacity(0.15))
+                    .background(isSelected ? SB.Colors.gold600 : SB.Colors.gold100)
                     .clipShape(RoundedRectangle(cornerRadius: 3))
 
                 // Filename
                 Text((result.filename as NSString).deletingPathExtension)
                     .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? .yellow : .white.opacity(0.7))
+                    .foregroundStyle(isSelected ? SB.Colors.navy900 : SB.Colors.navy700)
                     .lineLimit(1)
 
                 // Score
                 Text("\(Int(result.score * 100))%")
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(SB.Colors.navy300)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.yellow.opacity(0.12) : Color.white.opacity(0.04))
+                    .fill(isSelected ? SB.Colors.gold100 : SB.Colors.bgTertiary)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(isSelected ? Color.yellow.opacity(0.4) : Color.white.opacity(0.06), lineWidth: 1)
+                            .strokeBorder(isSelected ? SB.Colors.gold600.opacity(0.4) : SB.Colors.navy100, lineWidth: 1)
                     )
             )
         }
@@ -527,32 +658,32 @@ struct MarkdownWebView: NSViewRepresentable {
         """
     }
 
-    // Obsidian-inspired dark theme CSS
+    // SBrain light theme CSS (navy + gold)
     private static let cssStyles = """
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
         font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
         font-size: 14px;
         line-height: 1.7;
-        color: rgba(255,255,255,0.82);
+        color: #2D4470;
         background: transparent;
         padding: 24px;
         -webkit-font-smoothing: antialiased;
     }
-    ::selection { background: rgba(100,200,255,0.25); }
+    ::selection { background: rgba(196,151,59,0.2); }
 
     /* Headings */
     h1, h2, h3, h4, h5, h6 {
-        color: rgba(255,255,255,0.95);
+        color: #1B2A4A;
         font-weight: 600;
         margin-top: 1.4em;
         margin-bottom: 0.5em;
         line-height: 1.3;
     }
-    h1 { font-size: 1.8em; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.3em; }
-    h2 { font-size: 1.4em; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 0.2em; }
+    h1 { font-size: 1.8em; border-bottom: 1px solid #D4DCE8; padding-bottom: 0.3em; }
+    h2 { font-size: 1.4em; border-bottom: 1px solid #D4DCE8; padding-bottom: 0.2em; }
     h3 { font-size: 1.15em; }
-    h4 { font-size: 1.05em; color: rgba(255,255,255,0.85); }
+    h4 { font-size: 1.05em; color: #2D4470; }
     h1:first-child, h2:first-child, h3:first-child { margin-top: 0; }
 
     /* Paragraphs */
@@ -560,32 +691,32 @@ struct MarkdownWebView: NSViewRepresentable {
 
     /* Links */
     a {
-        color: #7eb8da;
+        color: #3B7CC4;
         text-decoration: none;
-        border-bottom: 1px solid rgba(126,184,218,0.3);
+        border-bottom: 1px solid rgba(59,124,196,0.3);
         transition: border-color 0.2s;
     }
-    a:hover { border-bottom-color: #7eb8da; }
+    a:hover { border-bottom-color: #3B7CC4; }
 
     /* Strong & Emphasis */
-    strong { color: rgba(255,255,255,0.95); font-weight: 600; }
-    em { color: rgba(255,255,255,0.75); font-style: italic; }
+    strong { color: #1B2A4A; font-weight: 600; }
+    em { color: #5A7099; font-style: italic; }
 
     /* Inline code */
     code {
         font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', Menlo, monospace;
         font-size: 0.88em;
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.06);
+        background: #F2EDE8;
+        border: 1px solid #D4DCE8;
         border-radius: 4px;
         padding: 1px 5px;
-        color: #d4a0e0;
+        color: #9B4DCA;
     }
 
     /* Code blocks */
     pre {
-        background: rgba(0,0,0,0.35);
-        border: 1px solid rgba(255,255,255,0.06);
+        background: #F2EDE8;
+        border: 1px solid #D4DCE8;
         border-radius: 8px;
         padding: 16px;
         margin: 1em 0;
@@ -597,17 +728,17 @@ struct MarkdownWebView: NSViewRepresentable {
         border: none;
         padding: 0;
         font-size: 0.85em;
-        color: rgba(255,255,255,0.75);
+        color: #2D4470;
         line-height: 1.6;
     }
 
     /* Blockquote */
     blockquote {
-        border-left: 3px solid rgba(126,184,218,0.4);
+        border-left: 3px solid #C4973B;
         padding: 0.5em 1em;
         margin: 1em 0;
-        color: rgba(255,255,255,0.6);
-        background: rgba(126,184,218,0.04);
+        color: #5A7099;
+        background: rgba(196,151,59,0.06);
         border-radius: 0 6px 6px 0;
     }
     blockquote p { margin-bottom: 0.3em; }
@@ -621,7 +752,7 @@ struct MarkdownWebView: NSViewRepresentable {
     /* Checkbox (task list) */
     li input[type="checkbox"] {
         margin-right: 6px;
-        accent-color: #7eb8da;
+        accent-color: #C4973B;
     }
 
     /* Table */
@@ -632,22 +763,22 @@ struct MarkdownWebView: NSViewRepresentable {
         font-size: 0.92em;
     }
     th, td {
-        border: 1px solid rgba(255,255,255,0.08);
+        border: 1px solid #D4DCE8;
         padding: 8px 12px;
         text-align: left;
     }
     th {
-        background: rgba(255,255,255,0.05);
-        color: rgba(255,255,255,0.9);
+        background: #F2EDE8;
+        color: #1B2A4A;
         font-weight: 600;
     }
-    tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+    tr:nth-child(even) { background: rgba(242,237,232,0.5); }
 
     /* Horizontal rule */
     hr {
         border: none;
         height: 1px;
-        background: linear-gradient(to right, rgba(100,200,255,0.3), rgba(180,100,255,0.3), transparent);
+        background: linear-gradient(to right, #C4973B, #D4DCE8, transparent);
         margin: 2em 0;
     }
 
@@ -662,15 +793,15 @@ struct MarkdownWebView: NSViewRepresentable {
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.12);
+        background: #D4DCE8;
         border-radius: 3px;
     }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    ::-webkit-scrollbar-thumb:hover { background: #8FA3C4; }
 
     /* Tags (Obsidian-like) */
     .tag {
-        color: #7eb8da;
-        background: rgba(126,184,218,0.1);
+        color: #C4973B;
+        background: #F5EDD8;
         padding: 1px 6px;
         border-radius: 4px;
         font-size: 0.9em;
@@ -766,16 +897,16 @@ struct MarkdownWebView: NSViewRepresentable {
 
     static let highlightCSS = """
     .search-highlight {
-        background: rgba(255, 220, 50, 0.35);
-        color: #ffe066;
+        background: rgba(196, 151, 59, 0.25);
+        color: #1B2A4A;
         border-radius: 2px;
         padding: 0 1px;
-        box-shadow: 0 0 6px rgba(255, 220, 50, 0.2);
+        box-shadow: 0 0 4px rgba(196, 151, 59, 0.15);
     }
     .search-highlight-first {
-        background: rgba(255, 180, 0, 0.5);
-        color: #fff;
-        box-shadow: 0 0 10px rgba(255, 180, 0, 0.3);
+        background: rgba(196, 151, 59, 0.45);
+        color: #1B2A4A;
+        box-shadow: 0 0 8px rgba(196, 151, 59, 0.25);
     }
     """
 
@@ -822,6 +953,96 @@ struct MarkdownWebView: NSViewRepresentable {
         if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     """
+}
+
+// MARK: - Markdown Editor (raw text editing for base folder files)
+
+struct MarkdownEditor: NSViewRepresentable {
+    @Binding var content: String
+    var onSave: () -> Void
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        let textView = scrollView.documentView as! NSTextView
+
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.allowsUndo = true
+        textView.isRichText = false
+        textView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        textView.textColor = SBNSColor.navy900
+        textView.backgroundColor = SBNSColor.bgPrimary
+        textView.insertionPointColor = SBNSColor.gold600
+        textView.textContainerInset = NSSize(width: 20, height: 16)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+
+        textView.delegate = context.coordinator
+        textView.string = content
+
+        scrollView.hasVerticalScroller = true
+        scrollView.scrollerStyle = .overlay
+        scrollView.drawsBackground = false
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != content && !context.coordinator.isEditing {
+            textView.string = content
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(content: $content, onSave: onSave)
+    }
+
+    class Coordinator: NSObject, NSTextViewDelegate {
+        var content: Binding<String>
+        var onSave: () -> Void
+        var isEditing = false
+        private var debounceTask: DispatchWorkItem?
+
+        init(content: Binding<String>, onSave: @escaping () -> Void) {
+            self.content = content
+            self.onSave = onSave
+        }
+
+        func textDidBeginEditing(_ notification: Notification) {
+            isEditing = true
+        }
+
+        func textDidEndEditing(_ notification: Notification) {
+            isEditing = false
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            content.wrappedValue = textView.string
+
+            // Auto-save with 3s debounce
+            debounceTask?.cancel()
+            let task = DispatchWorkItem { [weak self] in
+                DispatchQueue.main.async {
+                    self?.onSave()
+                }
+            }
+            debounceTask = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: task)
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            // Cmd+S to save
+            if commandSelector == NSSelectorFromString("saveDocument:") {
+                content.wrappedValue = textView.string
+                onSave()
+                return true
+            }
+            return false
+        }
+    }
 }
 
 // MARK: - HTML WebView (direct HTML rendering)

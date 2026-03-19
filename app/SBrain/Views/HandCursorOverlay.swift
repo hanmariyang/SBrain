@@ -135,7 +135,7 @@ struct HandCursorOverlay: View {
                     .foregroundStyle(cursorColor(handTracking.gesture).opacity(0.7))
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
-                    .background(Color.black.opacity(0.5))
+                    .background(SB.Colors.bgElevated.opacity(0.85))
                     .clipShape(RoundedRectangle(cornerRadius: 3))
             }
         }
@@ -161,11 +161,11 @@ struct HandCursorOverlay: View {
 
             Text(handTracking.isTracking ? "Hand" : "No Hand")
                 .font(.system(size: 9, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(SB.Colors.navy700)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.black.opacity(0.4))
+        .background(SB.Colors.bgElevated.opacity(0.9))
         .clipShape(Capsule())
     }
 }

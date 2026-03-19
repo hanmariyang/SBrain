@@ -56,7 +56,7 @@ struct BrainMapView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                Color(nsColor: NSColor(red: 0.02, green: 0.02, blue: 0.06, alpha: 1))
+                SB.Colors.bgPrimary
 
                 if let graph = noteStore.filteredBrainGraph, !graph.neurons.isEmpty {
                     BrainCanvas3D(
@@ -520,20 +520,12 @@ private struct BrainCanvas3D: View {
 
     private func drawBackground(_ context: inout GraphicsContext, _ size: CGSize) {
         let bgRect = CGRect(origin: .zero, size: size)
-        let colors: [Color]
-        if isImmersive {
-            colors = [
-                Color(red: 0.0, green: 0.0, blue: 0.05),
-                Color(red: 0.02, green: 0.01, blue: 0.08),
-                Color(red: 0.0, green: 0.0, blue: 0.03)
-            ]
-        } else {
-            colors = [
-                Color(red: 0.02, green: 0.01, blue: 0.08),
-                Color(red: 0.03, green: 0.02, blue: 0.06),
-                Color(red: 0.01, green: 0.01, blue: 0.04)
-            ]
-        }
+        // Light cream gradient
+        let colors: [Color] = [
+            Color(hex: "FAF8F5"),  // bgPrimary
+            Color(hex: "F2EDE8"),  // bgSecondary
+            Color(hex: "EBE5DE")   // bgTertiary
+        ]
         let shading = GraphicsContext.Shading.linearGradient(
             Gradient(colors: colors),
             startPoint: CGPoint(x: size.width / 2, y: 0),
@@ -545,16 +537,19 @@ private struct BrainCanvas3D: View {
     // MARK: - Starfield
 
     private func drawStarfield(_ context: inout GraphicsContext, _ size: CGSize, _ time: Double) {
-        let starCount = isImmersive ? 60 : 30
+        // Subtle gold particles floating in the background
+        let starCount = isImmersive ? 40 : 20
         for i in 0..<starCount {
             let seed = Double(i) * 97.31
-            let phase = time * 0.015 + seed
-            let px = fmod(abs(sin(seed * 1.7) * 7919 + phase * 3), 1.0) * Double(size.width)
-            let py = fmod(abs(cos(seed * 2.3) * 6131 + phase * 2), 1.0) * Double(size.height)
-            let pSize = 0.8 + Double(i % 3) * 0.6
-            let twinkle = isImmersive ? (0.05 + 0.06 * sin(phase * 1.5)) : (0.03 + 0.04 * sin(phase * 1.5))
+            let phase = time * 0.012 + seed
+            let px = fmod(abs(sin(seed * 1.7) * 7919 + phase * 2), 1.0) * Double(size.width)
+            let py = fmod(abs(cos(seed * 2.3) * 6131 + phase * 1.5), 1.0) * Double(size.height)
+            let pSize = 1.0 + Double(i % 3) * 0.5
+            let twinkle = 0.06 + 0.05 * sin(phase * 1.2)
             let rect = CGRect(x: px - pSize / 2, y: py - pSize / 2, width: pSize, height: pSize)
-            context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(twinkle)))
+            // Alternate between gold and navy particles
+            let color: Color = i % 3 == 0 ? Color(hex: "C4973B") : Color(hex: "8FA3C4")
+            context.fill(Path(ellipseIn: rect), with: .color(color.opacity(twinkle)))
         }
     }
 
@@ -620,7 +615,7 @@ private struct BrainCanvas3D: View {
             var path = Path()
             path.move(to: from)
             path.addQuadCurve(to: to, control: CGPoint(x: midX, y: midY))
-            let grad = Gradient(colors: [Color.cyan.opacity(baseOpacity), Color.purple.opacity(baseOpacity)])
+            let grad = Gradient(colors: [Color(hex: "C4973B").opacity(baseOpacity), Color(hex: "8FA3C4").opacity(baseOpacity)])
             context.stroke(path, with: .linearGradient(grad, startPoint: from, endPoint: to), lineWidth: max(0.3, lineWidth))
         }
     }
@@ -675,14 +670,14 @@ private struct BrainCanvas3D: View {
         if isSelected {
             let ringSize = effectiveSize * 2.2
             let ringRect = CGRect(x: sx - ringSize / 2, y: sy - ringSize / 2, width: ringSize, height: ringSize)
-            context.stroke(Path(ellipseIn: ringRect), with: .color(.cyan.opacity(0.3 + 0.15 * sin(time * 2.0))), lineWidth: 1.5)
+            context.stroke(Path(ellipseIn: ringRect), with: .color(Color(hex: "C4973B").opacity(0.4 + 0.15 * sin(time * 2.0))), lineWidth: 1.5)
         }
 
         // Multi-selected: steady ring
         if isMultiSelected && !isSelected {
             let ringSize = effectiveSize * 1.8
             let ringRect = CGRect(x: sx - ringSize / 2, y: sy - ringSize / 2, width: ringSize, height: ringSize)
-            context.stroke(Path(ellipseIn: ringRect), with: .color(.mint.opacity(0.5)), lineWidth: 1.2)
+            context.stroke(Path(ellipseIn: ringRect), with: .color(Color(hex: "3B7CC4").opacity(0.5)), lineWidth: 1.2)
         }
 
         // Core
@@ -697,7 +692,7 @@ private struct BrainCanvas3D: View {
         }
         let dotSize = effectiveSize * 0.3
         let dotRect = CGRect(x: sx - dotSize / 2, y: sy - dotSize / 2, width: dotSize, height: dotSize)
-        context.fill(Path(ellipseIn: dotRect), with: .color(.white.opacity(coreOpacity * 0.7)))
+        context.fill(Path(ellipseIn: dotRect), with: .color(Color(hex: "FAF8F5").opacity(coreOpacity * 0.8)))
     }
 
     // MARK: - Hover Label
@@ -714,16 +709,16 @@ private struct BrainCanvas3D: View {
         let typeLabel = isDB ? "DB" : (isHTML ? "HTML" : "MD")
         let label = "\(name)  \(typeLabel)"
 
-        let styledText = Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
+        let styledText = Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(hex: "1B2A4A"))
         let resolved = context.resolve(styledText)
         let ms = resolved.measure(in: CGSize(width: 400, height: 50))
 
         let hPad: CGFloat = 12; let vPad: CGFloat = 7
         let bgRect = CGRect(x: pos.x - ms.width / 2 - hPad, y: pos.y - 30 - ms.height / 2 - vPad,
                              width: ms.width + hPad * 2, height: ms.height + vPad * 2)
-        context.fill(Path(roundedRect: bgRect, cornerRadius: 8), with: .color(.black.opacity(0.85)))
-        let borderColor: Color = isDB ? .green : (isHTML ? .orange : .cyan)
-        context.stroke(Path(roundedRect: bgRect, cornerRadius: 8), with: .color(borderColor.opacity(0.4)), lineWidth: 1)
+        context.fill(Path(roundedRect: bgRect, cornerRadius: 8), with: .color(.white.opacity(0.95)))
+        let borderColor: Color = isDB ? Color(hex: "4CAF7D") : (isHTML ? Color(hex: "D4883B") : Color(hex: "C4973B"))
+        context.stroke(Path(roundedRect: bgRect, cornerRadius: 8), with: .color(borderColor.opacity(0.5)), lineWidth: 1)
         context.draw(resolved, at: CGPoint(x: pos.x, y: pos.y - 30))
     }
 
@@ -753,21 +748,22 @@ private struct BrainCanvas3D: View {
     // MARK: - Helpers
 
     private func neuronColor(_ neuron: Neuron, isHovered: Bool, isSelected: Bool, isHTML: Bool, isSearchMatch: Bool = false, isMultiSelected: Bool = false) -> Color {
-        if isSelected { return .cyan }
-        if isHovered { return .white }
-        if isMultiSelected { return .mint }
-        if isSearchMatch { return .yellow }
-        // DB table neurons — green/emerald hue
+        if isSelected { return Color(hex: "C4973B") }       // gold
+        if isHovered { return Color(hex: "1B2A4A") }        // navy
+        if isMultiSelected { return Color(hex: "3B7CC4") }  // accentBlue
+        if isSearchMatch { return Color(hex: "D4883B") }    // accentOrange
+        // DB table neurons — green/teal hue
         if neuron.id.hasPrefix("db:") {
-            let hue = 0.35 + (neuron.x + neuron.y) / 4 * 0.08
-            return Color(hue: hue, saturation: 0.7, brightness: 0.85)
+            let hue = 0.42 + (neuron.x + neuron.y) / 4 * 0.06
+            return Color(hue: hue, saturation: 0.55, brightness: 0.65)
         }
         if isHTML {
-            let hue = 0.08 + (neuron.x + neuron.y) / 4 * 0.05
-            return Color(hue: hue, saturation: 0.7, brightness: 0.9)
+            let hue = 0.07 + (neuron.x + neuron.y) / 4 * 0.04
+            return Color(hue: hue, saturation: 0.55, brightness: 0.7)
         }
-        let hue = 0.5 + (neuron.x + neuron.y) / 4 * 0.3
-        return Color(hue: hue, saturation: 0.8, brightness: 0.9)
+        // MD neurons — navy/indigo range
+        let hue = 0.58 + (neuron.x + neuron.y) / 4 * 0.15
+        return Color(hue: hue, saturation: 0.5, brightness: 0.55)
     }
 }
 
@@ -780,16 +776,16 @@ struct BrainMapEmptyState: View {
         VStack(spacing: 16) {
             Image(systemName: "brain")
                 .font(.system(size: 64))
-                .foregroundStyle(.linearGradient(colors: [.purple, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .foregroundStyle(.linearGradient(colors: [SB.Colors.navy700, SB.Colors.gold600], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .opacity(0.5)
-            Text("Brain Map").font(.title2).foregroundStyle(.white.opacity(0.6))
+            Text("Brain Map").font(.title2).foregroundStyle(SB.Colors.navy500)
             if isIngesting {
                 HStack(spacing: 8) {
-                    ProgressView().scaleEffect(0.7).tint(.purple)
-                    Text("임베딩 생성 중...").font(.caption).foregroundStyle(.white.opacity(0.4))
+                    ProgressView().scaleEffect(0.7).tint(SB.Colors.gold600)
+                    Text("임베딩 생성 중...").font(.caption).foregroundStyle(SB.Colors.navy300)
                 }
             } else {
-                Text("폴더를 인덱싱하면 Brain Map이 생성됩니다").font(.caption).foregroundStyle(.white.opacity(0.3))
+                Text("폴더를 인덱싱하면 Brain Map이 생성됩니다").font(.caption).foregroundStyle(SB.Colors.navy300)
             }
         }
     }

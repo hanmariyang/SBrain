@@ -27,11 +27,11 @@ class TerminalManager: ObservableObject {
         let terminalView = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 800, height: 400))
 
         // Configure appearance
-        terminalView.nativeForegroundColor = NSColor(white: 0.85, alpha: 1)
-        terminalView.nativeBackgroundColor = NSColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)
+        terminalView.nativeForegroundColor = SBNSColor.navy900
+        terminalView.nativeBackgroundColor = SBNSColor.bgPrimary
         terminalView.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-        terminalView.caretColor = NSColor.cyan
-        terminalView.selectedTextBackgroundColor = NSColor.cyan.withAlphaComponent(0.25)
+        terminalView.caretColor = SBNSColor.gold600
+        terminalView.selectedTextBackgroundColor = SBNSColor.gold400.withAlphaComponent(0.2)
         terminalView.optionAsMetaKey = true
 
         // Determine shell and working directory
@@ -41,7 +41,10 @@ class TerminalManager: ObservableObject {
         // Start the shell process
         terminalView.startProcess(executable: shell, args: [], environment: nil, execName: nil, currentDirectory: dir)
 
-        let process = terminalView.process!
+        guard let process = terminalView.process else {
+            print("[TerminalManager] Failed to start shell process: \(shell)")
+            return
+        }
 
         let session = TerminalSession(
             title: title,

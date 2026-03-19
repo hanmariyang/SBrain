@@ -39,19 +39,19 @@ struct ProjectSectionHeader: View {
 
             Text(project.name)
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(SB.Colors.navy900)
 
             if let root = project.rootFolder {
                 Text("\(root.docFileCount)")
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.2))
+                    .foregroundStyle(SB.Colors.navy300)
             }
 
             Spacer()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color.white.opacity(0.03))
+        .background(SB.Colors.bgTertiary.opacity(0.5))
     }
 
     private var projectColor: Color {
@@ -78,20 +78,20 @@ struct FolderNodeRow: View {
                     HStack(spacing: 6) {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                             .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(SB.Colors.navy300)
                             .frame(width: 12)
 
                         Image(systemName: isExpanded ? "folder.fill" : "folder")
                             .font(.system(size: 12))
-                            .foregroundStyle(.cyan.opacity(0.6))
+                            .foregroundStyle(SB.Colors.gold600.opacity(0.7))
 
                         Text(node.name)
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(SB.Colors.navy700)
 
                         Text("\(node.docFileCount)")
                             .font(.system(size: 9, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.2))
+                            .foregroundStyle(SB.Colors.navy300)
 
                         Spacer()
                     }
@@ -140,7 +140,7 @@ struct FileRow: View {
                     HStack(spacing: 4) {
                         Text((node.name as NSString).deletingPathExtension)
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white.opacity(isSelected ? 1.0 : 0.8))
+                            .foregroundStyle(isSelected ? SB.Colors.navy900 : SB.Colors.navy700)
                             .lineLimit(1)
 
                         Text(fileExtension.uppercased())
@@ -155,7 +155,7 @@ struct FileRow: View {
                     if !node.preview.isEmpty {
                         Text(node.preview)
                             .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(SB.Colors.navy300)
                             .lineLimit(2)
                             .lineSpacing(1)
                     }
@@ -166,7 +166,7 @@ struct FileRow: View {
                 if let date = node.modifiedAt {
                     Text(formatDate(date))
                         .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.15))
+                        .foregroundStyle(SB.Colors.navy300)
                         .padding(.top, 2)
                 }
             }
@@ -175,7 +175,7 @@ struct FileRow: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.cyan.opacity(0.1) : Color.clear)
+                    .fill(isSelected ? SB.Colors.gold100 : Color.clear)
                     .padding(.horizontal, 4)
             )
             .contentShape(Rectangle())
@@ -211,21 +211,21 @@ struct FileRow: View {
     private var fileIconColor: Color {
         switch fileExtension {
         case "html", "htm":
-            return .orange
+            return SB.Colors.accentOrange
         case "md", "markdown":
-            return .cyan
+            return SB.Colors.accentBlue
         case "txt":
-            return .white.opacity(0.5)
+            return SB.Colors.navy500
         case "json":
-            return .yellow
+            return SB.Colors.gold600
         case "yaml", "yml":
-            return .green
+            return SB.Colors.accentGreen
         case "csv":
-            return .mint
+            return SB.Colors.accentGreen
         case "pdf":
-            return .red
+            return SB.Colors.accentRed
         default:
-            return .purple
+            return SB.Colors.navy500
         }
     }
 
@@ -247,28 +247,28 @@ struct RecallResultList: View {
             HStack(spacing: 8) {
                 Image(systemName: "sparkle.magnifyingglass")
                     .font(.system(size: 10))
-                    .foregroundStyle(.yellow.opacity(0.7))
+                    .foregroundStyle(SB.Colors.gold600)
 
                 Text("회상 결과")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(SB.Colors.navy700)
 
                 Text("\(noteStore.filteredSearchResults.count)건")
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.yellow.opacity(0.5))
+                    .foregroundStyle(SB.Colors.gold600)
 
                 Spacer()
 
                 Button(action: { noteStore.clearSearch() }) {
                     Text("닫기")
                         .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(SB.Colors.navy300)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.yellow.opacity(0.05))
+            .background(SB.Colors.gold100.opacity(0.5))
 
             // Results
             LazyVStack(spacing: 2) {
@@ -279,8 +279,8 @@ struct RecallResultList: View {
                             .fill(
                                 RadialGradient(
                                     colors: [
-                                        .yellow.opacity(result.score),
-                                        .yellow.opacity(0.1),
+                                        SB.Colors.gold600.opacity(result.score),
+                                        SB.Colors.gold400.opacity(0.1),
                                     ],
                                     center: .center,
                                     startRadius: 0,
@@ -288,17 +288,17 @@ struct RecallResultList: View {
                                 )
                             )
                             .frame(width: 10, height: 10)
-                            .shadow(color: .yellow.opacity(result.score * 0.6), radius: 4)
+                            .shadow(color: SB.Colors.gold600.opacity(result.score * 0.6), radius: 4)
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(resultFileName(result))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.white.opacity(isSelected ? 1.0 : 0.9))
+                                .foregroundStyle(isSelected ? SB.Colors.navy900 : SB.Colors.navy700)
                                 .lineLimit(1)
 
                             Text(result.chunkText)
                                 .font(.system(size: 10))
-                                .foregroundStyle(.white.opacity(0.35))
+                                .foregroundStyle(SB.Colors.navy300)
                                 .lineLimit(2)
                         }
 
@@ -306,13 +306,13 @@ struct RecallResultList: View {
 
                         Text("\(Int(result.score * 100))%")
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.yellow.opacity(0.7))
+                            .foregroundStyle(SB.Colors.gold600)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(isSelected ? Color.yellow.opacity(0.1) : Color.white.opacity(0.03))
+                            .fill(isSelected ? SB.Colors.gold100 : SB.Colors.bgTertiary.opacity(0.3))
                             .padding(.horizontal, 4)
                     )
                     .onTapGesture {

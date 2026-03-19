@@ -83,16 +83,40 @@ jobs:
             ENABLE_HARDENED_RUNTIME=YES \
             MARKETING_VERSION=${{ env.VERSION }}
 
-      # 8. Export .app
+      # 8. Export .app via xcodebuild
       - name: Export app
         run: |
-          cp -R "build/${{ env.APP_NAME }}.xcarchive/Products/Applications/${{ env.APP_NAME }}.app" \
-            "build/${{ env.APP_NAME }}.app"
+          cat > /tmp/ExportOptions.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>teamID</key>
+            <string>94C6X7LGU7</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Developer ID Application</string>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath "build/${{ env.APP_NAME }}.xcarchive" \
+            -exportOptionsPlist /tmp/ExportOptions.plist \
+            -exportPath build/export
+
+          cp -R "build/export/${{ env.APP_NAME }}.app" "build/${{ env.APP_NAME }}.app"
 
       # 9. Verify signature
       - name: Verify signature
         run: |
+          echo "=== Code signature ==="
           codesign --verify --deep --strict --verbose=2 "build/${{ env.APP_NAME }}.app"
+          echo "=== Signing info ==="
+          codesign -dvv "build/${{ env.APP_NAME }}.app" 2>&1 || true
 
       # 10. Notarize
       - name: Notarize
@@ -103,12 +127,31 @@ jobs:
         run: |
           ditto -c -k --keepParent "build/${{ env.APP_NAME }}.app" "build/${{ env.APP_NAME }}.zip"
 
-          xcrun notarytool submit "build/${{ env.APP_NAME }}.zip" \
+          # Submit for notarization and capture submission ID
+          SUBMIT_OUTPUT=$(xcrun notarytool submit "build/${{ env.APP_NAME }}.zip" \
             --apple-id "$APPLE_ID" \
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
-            --wait
+            --wait 2>&1) || true
 
+          echo "$SUBMIT_OUTPUT"
+
+          # Extract submission ID
+          SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | grep "id:" | head -1 | awk '{print $2}')
+
+          # Check status
+          if echo "$SUBMIT_OUTPUT" | grep -q "status: Invalid"; then
+            echo "=== Notarization FAILED — Downloading detailed log ==="
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" \
+              /tmp/notarization-log.json 2>&1 || true
+            cat /tmp/notarization-log.json
+            exit 1
+          fi
+
+          echo "=== Notarization succeeded — Stapling ==="
           xcrun stapler staple "build/${{ env.APP_NAME }}.app"
 
       # 11. Create DMG

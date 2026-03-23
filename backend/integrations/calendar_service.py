@@ -18,6 +18,14 @@ from googleapiclient.errors import HttpError
 
 logger = logging.getLogger(__name__)
 
+
+class AuthRequiredError(Exception):
+    """재인증이 필요한 경우 발생."""
+    def __init__(self, reason: str = "unknown"):
+        self.reason = reason
+        super().__init__(f"Re-authentication required: {reason}")
+
+
 # 토큰 저장 경로
 _TOKENS_PATH = Path(__file__).resolve().parent.parent / ".google_tokens.json"
 
@@ -84,7 +92,7 @@ def _get_service():
     """인증된 Google Calendar API 서비스 객체 반환."""
     creds = _load_credentials()
     if not creds:
-        raise ValueError("Not authenticated. Please complete OAuth flow first.")
+        raise AuthRequiredError("no_tokens")
 
     # 토큰 만료 시 자동 갱신
     if creds.expired and creds.refresh_token:
@@ -93,10 +101,12 @@ def _get_service():
             _save_credentials(creds)
         except Exception as e:
             logger.error("Failed to refresh Google token: %s", e)
-            raise ValueError("Token refresh failed. Please re-authenticate.") from e
+            # refresh_token 만료/취소 — 토큰 파일 삭제 후 재인증 요구
+            _delete_tokens()
+            raise AuthRequiredError("refresh_failed") from e
 
     if not creds.valid:
-        raise ValueError("Invalid credentials. Please re-authenticate.")
+        raise AuthRequiredError("invalid_credentials")
 
     return build("calendar", "v3", credentials=creds)
 
@@ -159,22 +169,36 @@ def exchange_code(code: str) -> bool:
         return False
 
 
-def is_authenticated() -> bool:
-    """유효한 Google 토큰 존재 여부 확인."""
+def _delete_tokens():
+    """저장된 토큰 파일 삭제."""
+    if _TOKENS_PATH.exists():
+        _TOKENS_PATH.unlink()
+        logger.info("Google tokens deleted: %s", _TOKENS_PATH)
+
+
+def is_authenticated() -> dict:
+    """
+    유효한 Google 토큰 존재 여부 확인.
+    Returns: {"authenticated": bool, "re_auth_required": bool, "reason": str|None}
+    """
     creds = _load_credentials()
     if not creds:
-        return False
+        return {"authenticated": False, "re_auth_required": False, "reason": None}
 
     # 만료되었지만 refresh_token이 있으면 갱신 시도
     if creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
             _save_credentials(creds)
-            return True
+            return {"authenticated": True, "re_auth_required": False, "reason": None}
         except Exception:
-            return False
+            _delete_tokens()
+            return {"authenticated": False, "re_auth_required": True, "reason": "refresh_failed"}
 
-    return creds.valid
+    if creds.valid:
+        return {"authenticated": True, "re_auth_required": False, "reason": None}
+
+    return {"authenticated": False, "re_auth_required": True, "reason": "invalid_credentials"}
 
 
 # ── 이벤트 CRUD ──────────────────────────────────────────────

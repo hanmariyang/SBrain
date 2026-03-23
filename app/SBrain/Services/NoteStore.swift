@@ -337,6 +337,50 @@ class NoteStore: ObservableObject {
     // Legacy compat: selectFolder maps to addFolder
     func selectFolder() { addFolder() }
 
+    // MARK: - File Change Handling (from FileMonitor)
+
+    /// FileMonitor 이벤트 수신 → 변경된 프로젝트 부분 리스캔 + 재인덱싱
+    func handleFileChange(changedPaths: [String]) {
+        let supportedExtensions: Set<String> = ["md", "html", "htm"]
+
+        // 1. 변경된 프로젝트 식별 및 리스캔
+        for (index, project) in projects.enumerated() {
+            let isAffected = changedPaths.contains { $0.hasPrefix(project.path) }
+            guard isAffected else { continue }
+            guard let newRoot = FolderScanner.scan(at: project.path) else { continue }
+
+            projects[index] = ProjectFolder(
+                path: project.path,
+                name: project.name,
+                rootFolder: newRoot,
+                isBaseFolder: project.isBaseFolder
+            )
+        }
+
+        // 2. 변경된 문서 파일만 필터링
+        let mdPaths = changedPaths.filter {
+            supportedExtensions.contains(URL(fileURLWithPath: $0).pathExtension.lowercased())
+        }
+
+        let existing = mdPaths.filter { FileManager.default.fileExists(atPath: $0) }
+        let deleted = mdPaths.filter { !FileManager.default.fileExists(atPath: $0) }
+
+        // 3. 부분 재인덱싱 요청
+        if !existing.isEmpty || !deleted.isEmpty {
+            Task {
+                try? await api.partialIngest(paths: existing, deletedPaths: deleted)
+            }
+        }
+
+        // 4. 그래프 리빌드
+        rebuildGraph()
+
+        // 5. 선택된 파일이 변경됐으면 내용 새로고침
+        if let selected = selectedFilePath, changedPaths.contains(selected) {
+            selectedFileContent = FolderScanner.readContent(at: selected)
+        }
+    }
+
     // MARK: - Graph
 
     func rebuildGraph() {

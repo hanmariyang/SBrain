@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from . import calendar_service
+from .calendar_service import AuthRequiredError
 
 
 @api_view(["GET"])
@@ -66,9 +67,8 @@ def calendar_auth_callback(request):
 @api_view(["GET"])
 def calendar_status(request):
     """Google Calendar 인증 상태 확인."""
-    return Response({
-        "authenticated": calendar_service.is_authenticated(),
-    })
+    auth_status = calendar_service.is_authenticated()
+    return Response(auth_status)
 
 
 @api_view(["GET", "POST"])
@@ -87,9 +87,9 @@ def calendar_events(request):
         try:
             events = calendar_service.list_events(start, end)
             return Response({"events": events, "count": len(events)})
-        except ValueError as e:
+        except (ValueError, AuthRequiredError) as e:
             return Response(
-                {"error": str(e)},
+                {"error": str(e), "re_auth_required": isinstance(e, AuthRequiredError)},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         except Exception as e:
@@ -120,9 +120,9 @@ def calendar_events(request):
             attendees=attendees,
         )
         return Response(event, status=status.HTTP_201_CREATED)
-    except ValueError as e:
+    except (ValueError, AuthRequiredError) as e:
         return Response(
-            {"error": str(e)},
+            {"error": str(e), "re_auth_required": isinstance(e, AuthRequiredError)},
             status=status.HTTP_401_UNAUTHORIZED,
         )
     except Exception as e:
@@ -168,9 +168,9 @@ def calendar_event_detail(request, event_id):
             {"detail": "Event deleted"},
             status=status.HTTP_204_NO_CONTENT,
         )
-    except ValueError as e:
+    except (ValueError, AuthRequiredError) as e:
         return Response(
-            {"error": str(e)},
+            {"error": str(e), "re_auth_required": isinstance(e, AuthRequiredError)},
             status=status.HTTP_401_UNAUTHORIZED,
         )
     except Exception as e:

@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .ingest import get_status, ingest_folder
+from .ingest import get_status, ingest_folder, partial_ingest_files
 from .models import Note
 from .serializers import (
     IngestRequestSerializer,
@@ -76,6 +76,22 @@ def search(request):
     results = do_search(query, limit)
     result_serializer = SearchResultSerializer(results, many=True)
     return Response(result_serializer.data)
+
+
+@api_view(["PATCH"])
+def partial_ingest(request):
+    """변경된 파일만 부분 재인덱싱."""
+    paths = request.data.get("paths", [])
+    deleted_paths = request.data.get("deleted_paths", [])
+
+    if not paths and not deleted_paths:
+        return Response(
+            {"error": "paths or deleted_paths is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    result = partial_ingest_files(paths, deleted_paths)
+    return Response(result)
 
 
 @api_view(["GET"])

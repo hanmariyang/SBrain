@@ -35,6 +35,9 @@ struct ContentView: View {
     @EnvironmentObject var backendManager: BackendManager
     @EnvironmentObject var dbStore: DatabaseStore
     @EnvironmentObject var terminalManager: TerminalManager
+    @EnvironmentObject var slackStore: SlackStore
+    @EnvironmentObject var calendarStore: CalendarStore
+    @EnvironmentObject var fileMonitor: FileMonitor
 
     @State private var viewMode: ViewMode = .list
     @State private var showExplorerPanel = true
@@ -102,9 +105,25 @@ struct ContentView: View {
             .background(SB.Colors.bgPrimary)
         }
         .frame(minWidth: 900, minHeight: 550)
-        .task {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            noteStore.restoreProjects()
+        .onChange(of: backendManager.isRunning) { _, isRunning in
+            guard isRunning else { return }
+            Task {
+                // Phase 1: 프로젝트 복원
+                noteStore.restoreProjects()
+
+                // Phase 2: 인증 상태 복원 (병렬)
+                async let calAuth: () = calendarStore.checkAuth()
+                async let slkAuth: () = slackStore.checkStatus()
+                _ = await (calAuth, slkAuth)
+
+                // Phase 3: 파일 모니터 시작
+                fileMonitor.onFilesChanged = { [weak noteStore] paths in
+                    noteStore?.handleFileChange(changedPaths: paths)
+                }
+                for project in noteStore.projects {
+                    fileMonitor.startWatching(path: project.path)
+                }
+            }
         }
         .onChange(of: dbStore.dbBrainGraph?.neurons.count) { _, _ in
             noteStore.dbBrainGraph = dbStore.dbBrainGraph

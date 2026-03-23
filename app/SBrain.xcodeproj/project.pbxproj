@@ -35,6 +35,7 @@
 		AD774350C6B035DD11AE0BED /* NoteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7D097F10003525C94A8B00 /* NoteDetailView.swift */; };
 		B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 01B4E7973C454AE1A6921772 /* SwiftTerm */; };
 		BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */; };
+		BD941E6D1B9E6C75E3AA9C26 /* FileMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A94CB66CB9E14785D415BD /* FileMonitor.swift */; };
 		C2BE7B1C1E3FD63B16F65FF9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B117FB2D45C49F54240EFFDC /* SettingsView.swift */; };
 		C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */; };
 		D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7544CAB23D252B03FB65F9C /* SBrainApp.swift */; };
@@ -71,6 +72,7 @@
 		CF7A5190CBD9E8F4C1DF06DA /* HandCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandCursorOverlay.swift; sourceTree = "<group>"; };
 		D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteStore.swift; sourceTree = "<group>"; };
 		D5D342196863002E996A7027 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D6A94CB66CB9E14785D415BD /* FileMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileMonitor.swift; sourceTree = "<group>"; };
 		D74140C2CF4145F55F886B78 /* NoteListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteListView.swift; sourceTree = "<group>"; };
 		D7544CAB23D252B03FB65F9C /* SBrainApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SBrainApp.swift; sourceTree = "<group>"; };
 		DB7D097F10003525C94A8B00 /* NoteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteDetailView.swift; sourceTree = "<group>"; };
@@ -154,6 +156,7 @@
 				CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */,
 				CCF1EC1647C63785F60A824F /* CalendarStore.swift */,
 				502F625EF94764920370B930 /* DatabaseStore.swift */,
+				D6A94CB66CB9E14785D415BD /* FileMonitor.swift */,
 				714A8F991F10DB023F90B523 /* FolderScanner.swift */,
 				628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */,
 				09F625507856F470275E96B7 /* LocalGraphBuilder.swift */,
@@ -288,6 +291,7 @@
 				404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */,
 				64D8376FE675090D55A3A427 /* DesignTokens.swift in Sources */,
 				006FA931347C2A0123266694 /* ExplorerPanel.swift in Sources */,
+				BD941E6D1B9E6C75E3AA9C26 /* FileMonitor.swift in Sources */,
 				7B6A5A92D196C82E4CA1BC36 /* FolderScanner.swift in Sources */,
 				0C1BB40C09A03F90B8BE575B /* HandCursorOverlay.swift in Sources */,
 				1A834DA447A414DA0D955400 /* HandTrackingManager.swift in Sources */,
@@ -320,14 +324,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				INFOPLIST_FILE = SBrain/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.7.0;
+				MARKETING_VERSION = 0.7.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
@@ -459,14 +463,14 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				INFOPLIST_FILE = SBrain/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.7.0;
+				MARKETING_VERSION = 0.7.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;

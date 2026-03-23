@@ -5,11 +5,14 @@ slack-bolt Socket Mode를 사용하여 WebSocket으로 메시지를 수신하고
 thread-safe 인메모리 저장소에 보관한다.
 """
 
+import json
 import logging
 import os
+import sqlite3
 import threading
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -18,6 +21,126 @@ from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.response import SocketModeResponse
 
 logger = logging.getLogger(__name__)
+
+# ── 사용자 인증 영속화 ────────────────────────────────────────
+SLACK_USER_FILE = Path(__file__).resolve().parent.parent / ".slack_user.json"
+
+# ── 메시지 상태 영속화 ────────────────────────────────────────
+SLACK_DB_PATH = Path(__file__).resolve().parent.parent / "slack_state.db"
+
+
+def save_user(user_id: str, user_name: str = ""):
+    """user_id를 파일에 영구 저장."""
+    data = {
+        "user_id": user_id,
+        "user_name": user_name,
+        "authenticated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    SLACK_USER_FILE.write_text(json.dumps(data, ensure_ascii=False))
+    logger.info("Slack user saved: %s (%s)", user_id, user_name)
+
+
+def load_user() -> dict | None:
+    """저장된 user_id 로드. 없으면 None."""
+    if not SLACK_USER_FILE.exists():
+        return None
+    try:
+        data = json.loads(SLACK_USER_FILE.read_text())
+        if data.get("user_id"):
+            logger.info("Slack user loaded: %s", data["user_id"])
+            return data
+        return None
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning("Failed to load slack user file: %s", e)
+        return None
+
+def _init_slack_db():
+    """slack_state.db 초기화. 테이블 없으면 생성."""
+    conn = sqlite3.connect(str(SLACK_DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS slack_messages (
+            id          TEXT PRIMARY KEY,
+            channel     TEXT NOT NULL,
+            channel_name TEXT DEFAULT '',
+            user_id     TEXT DEFAULT '',
+            text        TEXT NOT NULL,
+            ts          TEXT DEFAULT '',
+            thread_ts   TEXT DEFAULT '',
+            is_mention  INTEGER DEFAULT 0,
+            received_at TEXT NOT NULL,
+            processed   INTEGER DEFAULT 0,
+            urgency     TEXT DEFAULT '',
+            action_type TEXT DEFAULT '',
+            summary     TEXT DEFAULT '',
+            draft_reply TEXT DEFAULT ''
+        )
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_slack_messages_processed
+            ON slack_messages(processed)
+    """)
+    conn.commit()
+    conn.close()
+    logger.info("Slack state DB initialized: %s", SLACK_DB_PATH)
+
+
+def _persist_message(msg: dict):
+    """메시지를 DB에 저장 (중복 시 무시)."""
+    try:
+        conn = sqlite3.connect(str(SLACK_DB_PATH))
+        conn.execute(
+            "INSERT OR IGNORE INTO slack_messages "
+            "(id, channel, channel_name, user_id, text, ts, thread_ts, is_mention, received_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                msg["id"], msg["channel"], msg.get("channel_name", ""),
+                msg.get("user", ""), msg["text"], msg.get("ts", ""),
+                msg.get("thread_ts", ""), int(msg.get("is_mention", False)),
+                msg.get("received_at", datetime.now(timezone.utc).isoformat()),
+            )
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning("Failed to persist Slack message: %s", e)
+
+
+def _load_pending_from_db() -> list[dict]:
+    """DB에서 미처리 메시지 로드."""
+    try:
+        conn = sqlite3.connect(str(SLACK_DB_PATH))
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM slack_messages WHERE processed = 0 "
+            "ORDER BY received_at DESC"
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.warning("Failed to load pending messages from DB: %s", e)
+        return []
+
+
+def _mark_processed_in_db(message_ids: list[str]):
+    """DB에서 메시지를 처리 완료로 표시."""
+    if not message_ids:
+        return
+    try:
+        conn = sqlite3.connect(str(SLACK_DB_PATH))
+        placeholders = ",".join("?" for _ in message_ids)
+        conn.execute(
+            f"UPDATE slack_messages SET processed = 1 WHERE id IN ({placeholders})",
+            message_ids,
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning("Failed to mark messages as processed in DB: %s", e)
+
+
+# DB 초기화 (모듈 로드 시)
+_init_slack_db()
 
 # ── 인메모리 메시지 저장소 (thread-safe) ──────────────────────
 
@@ -112,6 +235,9 @@ def _store_message(event: dict, is_mention: bool = False):
     with _lock:
         _messages.append(msg)
 
+    # DB에 영속화
+    _persist_message(msg)
+
     logger.debug("Slack message stored: %s", msg["id"])
 
 
@@ -160,11 +286,18 @@ def is_running() -> bool:
 
 
 def get_pending_messages() -> list[dict]:
-    """처리되지 않은 메시지 목록 반환. Socket Mode + Web API 병합."""
+    """처리되지 않은 메시지 목록 반환. Socket Mode + Web API + DB 병합."""
     # Web API로 최근 메시지를 직접 가져옴 (Socket Mode 보완)
     _fetch_recent_messages()
 
     with _lock:
+        # 인메모리에 없으면 DB에서 복원
+        if not _messages:
+            db_messages = _load_pending_from_db()
+            for dm in db_messages:
+                if not any(m["id"] == dm["id"] for m in _messages):
+                    _messages.append(dm)
+
         pending = [
             msg for msg in _messages if msg["id"] not in _processed_ids
         ]
@@ -243,6 +376,7 @@ def _fetch_recent_messages():
 
                     with _lock:
                         _messages.append(new_msg)
+                    _persist_message(new_msg)
 
             except SlackApiError:
                 continue
@@ -257,6 +391,8 @@ def mark_processed(message_ids: list[str]):
     """지정된 메시지를 처리 완료로 표시."""
     with _lock:
         _processed_ids.update(message_ids)
+    # DB에도 반영
+    _mark_processed_in_db(message_ids)
 
 
 def send_reply(channel: str, thread_ts: str, text: str) -> dict:

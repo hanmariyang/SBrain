@@ -7,12 +7,21 @@ import AppKit
 @MainActor
 class CalendarStore: ObservableObject {
     @Published var events: [CalendarEvent] = []
-    @Published var isAuthenticated = false
+    @Published var isAuthenticated = false {
+        didSet { cachedAuth = isAuthenticated }
+    }
     @Published var selectedDate = Date()
     @Published var isLoading = false
     @Published var errorMessage: String?
 
+    // 인증 상태 로컬 캐시 (앱 재시작 시 즉시 UI 반영)
+    @AppStorage("sbrain.calendar.authenticated") private var cachedAuth = false
+
     private let api = APIClient.shared
+
+    init() {
+        isAuthenticated = cachedAuth
+    }
 
     private static let isoFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()

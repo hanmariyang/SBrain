@@ -207,6 +207,12 @@ def _fetch_recent_messages():
                             continue
                         if not (is_im or is_my_mention or has_keyword):
                             continue
+                    else:
+                        # user_id 미설정: 키워드 필터만 적용
+                        if keywords:
+                            has_keyword = any(kw.lower() in text.lower() for kw in keywords)
+                            if not has_keyword:
+                                continue
 
                     new_msg = {
                         "id": str(uuid.uuid4()),

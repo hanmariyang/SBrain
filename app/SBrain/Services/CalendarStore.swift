@@ -38,12 +38,22 @@ class CalendarStore: ObservableObject {
         }
     }
 
-    /// Start OAuth flow — opens browser
+    /// Start OAuth flow — opens browser + polls for completion
     func startAuth() async {
         do {
             let authUrl = try await api.calendarAuth()
             if let url = URL(string: authUrl) {
                 NSWorkspace.shared.open(url)
+            }
+            // OAuth 완료 대기: 2초 간격으로 30초간 폴링
+            for _ in 0..<15 {
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+                let status = try await api.calendarStatus()
+                if status.authenticated {
+                    isAuthenticated = true
+                    await loadCurrentMonth()
+                    return
+                }
             }
         } catch {
             errorMessage = "인증 시작 실패: \(error.localizedDescription)"

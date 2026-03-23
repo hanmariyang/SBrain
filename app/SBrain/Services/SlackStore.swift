@@ -37,15 +37,25 @@ class SlackStore: ObservableObject {
         }
     }
 
-    /// Slack OAuth 시작 (브라우저 열기)
+    /// Slack OAuth 시작 (브라우저 열기 + 완료 대기 폴링)
     func startAuth() async {
         do {
             let authUrl = try await api.slackAuth()
             if let url = URL(string: authUrl) {
                 NSWorkspace.shared.open(url)
             }
+            // OAuth 완료 대기: 2초 간격으로 30초간 폴링
+            for _ in 0..<15 {
+                try await Task.sleep(nanoseconds: 2_000_000_000)
+                let user = try await api.slackUser()
+                if user.authenticated {
+                    isUserAuthenticated = true
+                    userName = user.user?.name ?? ""
+                    return
+                }
+            }
         } catch {
-            errorMessage = "Slack 인증 URL 생성 실패"
+            errorMessage = "Slack 인증 실패"
         }
     }
 

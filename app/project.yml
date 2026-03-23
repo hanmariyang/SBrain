@@ -39,7 +39,7 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSApplicationCategoryType: "public.app-category.productivity"
         NSCameraUsageDescription: "손 제스처 인식을 위해 카메라를 사용합니다"
-        SUFeedURL: "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml"
+        SUFeedURL: "https://sbrain-production-0f09.up.railway.app/appcast.xml"
         SUPublicEDKey: "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug="
         SUScheduledCheckInterval: 3600
         SUEnableAutomaticChecks: true

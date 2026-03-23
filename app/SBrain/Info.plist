@@ -27,7 +27,7 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml</string>
+	<string>https://sbrain-production-0f09.up.railway.app/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=</string>
 	<key>SUScheduledCheckInterval</key>

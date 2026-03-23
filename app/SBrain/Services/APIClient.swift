@@ -121,7 +121,12 @@ class APIClient {
 
     struct SlackStatusResponse: Codable {
         let connected: Bool
-        let workspace: String?
+        let pendingCount: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case connected
+            case pendingCount = "pending_count"
+        }
     }
 
     func slackStatus() async throws -> SlackStatusResponse {
@@ -182,10 +187,14 @@ class APIClient {
         return response.ok
     }
 
+    struct SlackChannelsResponse: Codable {
+        let channels: [SlackChannel]
+    }
+
     func slackChannels() async throws -> [SlackChannel] {
         let url = URL(string: "\(baseURL)/slack/channels/")!
         let (data, _) = try await URLSession.shared.data(from: url)
-        return try JSONDecoder().decode([SlackChannel].self, from: data)
+        return try JSONDecoder().decode(SlackChannelsResponse.self, from: data).channels
     }
 
     // MARK: - Calendar
@@ -210,10 +219,7 @@ class APIClient {
 
     func calendarAuth() async throws -> String {
         let url = URL(string: "\(baseURL)/calendar/auth/")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await URLSession.shared.data(from: url)
         let response = try JSONDecoder().decode(CalendarAuthResponse.self, from: data)
         return response.authUrl
     }

@@ -44,9 +44,11 @@ struct SlackChannel: Identifiable, Codable {
     let id: String
     let name: String
     let isMember: Bool
+    let isPrivate: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, name
         case isMember = "is_member"
+        case isPrivate = "is_private"
     }
 }

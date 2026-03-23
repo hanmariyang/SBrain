@@ -10,6 +10,7 @@ urlpatterns = [
     path("slack/channels/", slack_views.slack_channels, name="slack-channels"),
     path("slack/status/", slack_views.slack_status, name="slack-status"),
     path("slack/settings/", slack_views.slack_settings, name="slack-settings"),
+    path("slack/debug/", slack_views.slack_debug, name="slack-debug"),
     path("slack/auth/", slack_views.slack_auth, name="slack-auth"),
     path("slack/user/", slack_views.slack_user, name="slack-user"),
     # Google Calendar

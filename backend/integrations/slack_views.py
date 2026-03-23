@@ -133,6 +133,43 @@ def slack_status(request):
 
 
 @api_view(["GET"])
+def slack_debug(request):
+    """디버그: 메시지 수집 상태 확인."""
+    from slack_sdk import WebClient
+    import os
+
+    bot_token = os.getenv("SLACK_BOT_TOKEN", "")
+    client = WebClient(token=bot_token)
+
+    debug_info = {
+        "settings": slack_service.get_filter_settings(),
+        "is_running": slack_service.is_running(),
+    }
+
+    try:
+        conv = client.users_conversations(types="public_channel,private_channel,im", limit=10)
+        channels = conv.get("channels", [])
+        debug_info["bot_channels"] = [{"id": c["id"], "name": c.get("name", c["id"]), "is_im": c.get("is_im", False)} for c in channels[:5]]
+
+        # 첫 번째 비-IM 채널의 메시지 확인
+        for ch in channels:
+            if not ch.get("is_im"):
+                ch_id = ch["id"]
+                hist = client.conversations_history(channel=ch_id, limit=3)
+                msgs = hist.get("messages", [])
+                debug_info["sample_channel"] = ch.get("name", ch_id)
+                debug_info["sample_messages"] = [
+                    {"user": m.get("user","?"), "text": m.get("text","")[:80], "subtype": m.get("subtype"), "bot_id": m.get("bot_id")}
+                    for m in msgs
+                ]
+                break
+    except Exception as e:
+        debug_info["error"] = str(e)
+
+    return Response(debug_info)
+
+
+@api_view(["GET"])
 def slack_auth(request):
     """Slack OAuth 인증 URL 반환. 사용자 식별용."""
     from django.conf import settings as django_settings

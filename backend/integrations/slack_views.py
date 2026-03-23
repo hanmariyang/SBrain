@@ -31,7 +31,29 @@ def slack_scan(request):
                 "results": [],
             })
 
+        # 사용자 이름 resolve (캐시)
+        user_cache = {}
+        for msg in pending:
+            uid = msg.get("user", "")
+            if uid and uid not in user_cache:
+                info = slack_service.get_user_info(uid)
+                user_cache[uid] = info.get("display_name") or info.get("real_name", uid)
+
+        # AI 분석
         results = analyze_messages(pending)
+
+        # 분석 결과에 channel_name, user_name 추가
+        for r in results:
+            mid = r.get("message_id", "")
+            original = next((m for m in pending if m["id"] == mid), {})
+            r["channel"] = original.get("channel", "")
+            r["channel_name"] = original.get("channel_name", r.get("channel", ""))
+            r["user"] = original.get("user", "")
+            r["user_name"] = user_cache.get(original.get("user", ""), "")
+            r["timestamp"] = original.get("ts", "")
+            r["thread_ts"] = original.get("thread_ts", "")
+            r["text"] = original.get("text", "")
+            r["id"] = mid
 
         # 분석된 메시지를 처리 완료로 표시
         processed_ids = [msg["id"] for msg in pending]

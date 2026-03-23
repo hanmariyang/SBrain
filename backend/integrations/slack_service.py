@@ -146,12 +146,87 @@ def is_running() -> bool:
 
 
 def get_pending_messages() -> list[dict]:
-    """처리되지 않은 메시지 목록 반환."""
+    """처리되지 않은 메시지 목록 반환. Socket Mode + Web API 병합."""
+    # Web API로 최근 메시지를 직접 가져옴 (Socket Mode 보완)
+    _fetch_recent_messages()
+
     with _lock:
         pending = [
             msg for msg in _messages if msg["id"] not in _processed_ids
         ]
     return pending
+
+
+def _fetch_recent_messages():
+    """봇이 참여 중인 채널에서 최근 메시지를 Web API로 직접 가져옴."""
+    bot_token = os.getenv("SLACK_BOT_TOKEN", "")
+    client = WebClient(token=bot_token)
+
+    with _settings_lock:
+        my_user_id = _filter_settings["user_id"]
+        keywords = _filter_settings["keywords"]
+
+    try:
+        # 봇이 참여 중인 채널 목록
+        result = client.users_conversations(
+            types="public_channel,private_channel,im",
+            limit=50,
+        )
+        channels = result.get("channels", [])
+
+        for ch in channels:
+            ch_id = ch.get("id", "")
+            is_im = ch.get("is_im", False)
+
+            try:
+                history = client.conversations_history(
+                    channel=ch_id,
+                    limit=20,
+                )
+                for msg in history.get("messages", []):
+                    # bot 메시지 무시
+                    if msg.get("bot_id") or msg.get("subtype"):
+                        continue
+
+                    text = msg.get("text", "")
+                    ts = msg.get("ts", "")
+                    msg_user = msg.get("user", "")
+
+                    # 중복 방지 (ts 기반)
+                    with _lock:
+                        if any(m.get("ts") == ts and m.get("channel") == ch_id for m in _messages):
+                            continue
+
+                    # 필터링: 멘션/DM/키워드
+                    if my_user_id:
+                        is_my_mention = f"<@{my_user_id}>" in text
+                        has_keyword = keywords and any(kw.lower() in text.lower() for kw in keywords)
+                        # 본인이 보낸 메시지는 제외
+                        if msg_user == my_user_id and not is_im:
+                            continue
+                        if not (is_im or is_my_mention or has_keyword):
+                            continue
+
+                    new_msg = {
+                        "id": str(uuid.uuid4()),
+                        "channel": ch_id,
+                        "channel_name": ch.get("name", ch_id),
+                        "user": msg_user,
+                        "text": text,
+                        "ts": ts,
+                        "thread_ts": msg.get("thread_ts", ""),
+                        "is_mention": f"<@{my_user_id}>" in text if my_user_id else False,
+                        "received_at": datetime.now(timezone.utc).isoformat(),
+                    }
+
+                    with _lock:
+                        _messages.append(new_msg)
+
+            except SlackApiError:
+                continue
+
+    except SlackApiError as e:
+        logger.error("Failed to fetch recent messages: %s", e.response.get("error", str(e)))
 
 
 def mark_processed(message_ids: list[str]):

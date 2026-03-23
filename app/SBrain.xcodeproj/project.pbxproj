@@ -41,6 +41,7 @@
 		1063843C8FF0AAD02172AB79 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		3F737901CA8A7C63C9E7127A /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		43719472F5EB78307E0A0F9C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		4FB31782F75AB3095D6EDFBA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		502F625EF94764920370B930 /* DatabaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseStore.swift; sourceTree = "<group>"; };
 		628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingManager.swift; sourceTree = "<group>"; };
 		653236734E0D03FB336685E5 /* SidebarIconBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarIconBar.swift; sourceTree = "<group>"; };
@@ -81,6 +82,7 @@
 			isa = PBXGroup;
 			children = (
 				E77E57428659F1D47314B230 /* Assets.xcassets */,
+				4FB31782F75AB3095D6EDFBA /* Info.plist */,
 				DBCC751B2DE2EF17D2DA5F5F /* SBrain.entitlements */,
 				D7544CAB23D252B03FB65F9C /* SBrainApp.swift */,
 				DD228148A12D44D68006FF12 /* Models */,
@@ -283,9 +285,7 @@
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "손 제스처 인식을 위해 카메라를 사용합니다";
+				INFOPLIST_FILE = SBrain/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -294,11 +294,6 @@
 				MARKETING_VERSION = 0.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
-				SUAutomaticallyUpdate = YES;
-				SUEnableAutomaticChecks = YES;
-				SUFeedURL = "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml";
-				SUPublicEDKey = "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=";
-				SUScheduledCheckInterval = 3600;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Release;
@@ -429,9 +424,7 @@
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSCameraUsageDescription = "손 제스처 인식을 위해 카메라를 사용합니다";
+				INFOPLIST_FILE = SBrain/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -440,11 +433,6 @@
 				MARKETING_VERSION = 0.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
-				SUAutomaticallyUpdate = YES;
-				SUEnableAutomaticChecks = YES;
-				SUFeedURL = "https://raw.githubusercontent.com/hanmariyang/SBrain/main/appcast.xml";
-				SUPublicEDKey = "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug=";
-				SUScheduledCheckInterval = 3600;
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;

@@ -182,18 +182,27 @@ def is_authenticated() -> bool:
 
 def list_events(start: str, end: str) -> list[dict]:
     """
-    지정 기간의 모든 캘린더 이벤트 목록 조회.
-    본인이 포함된 모든 캘린더(primary + 공유 + 구독)에서 가져온다.
+    지정 기간의 캘린더 이벤트 목록 조회.
+    본인이 소유하거나 참석 수락한 캘린더만 포함.
     """
     try:
         service = _get_service()
 
-        # 모든 캘린더 목록 조회
+        # 본인이 소유(owner)하거나 참여(writer/reader) 중인 캘린더만 필터링
         calendar_list = service.calendarList().list().execute()
         calendars = calendar_list.get("items", [])
 
+        # accessRole: owner, writer = 본인 캘린더 또는 편집 가능
+        # reader, freeBusyReader = 구독/공유 캘린더 (본인 일정 아님)
+        own_calendars = [
+            cal for cal in calendars
+            if cal.get("accessRole") in ("owner", "writer")
+        ]
+
         all_events = []
-        for cal in calendars:
+        seen_ids = set()  # 중복 방지
+
+        for cal in own_calendars:
             cal_id = cal.get("id", "")
             cal_name = cal.get("summary", "")
             try:
@@ -207,14 +216,17 @@ def list_events(start: str, end: str) -> list[dict]:
                 ).execute()
 
                 for item in result.get("items", []):
+                    event_id = item.get("id", "")
+                    if event_id in seen_ids:
+                        continue
+                    seen_ids.add(event_id)
+
                     event = _format_event(item)
                     event["calendar_name"] = cal_name
                     all_events.append(event)
             except HttpError:
-                # 권한 없는 캘린더는 건너뜀
                 continue
 
-        # 시작 시간 기준 정렬
         all_events.sort(key=lambda e: e.get("start", ""))
         return all_events
 

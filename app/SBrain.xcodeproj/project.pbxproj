@@ -35,6 +35,7 @@
 		AD774350C6B035DD11AE0BED /* NoteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7D097F10003525C94A8B00 /* NoteDetailView.swift */; };
 		B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 01B4E7973C454AE1A6921772 /* SwiftTerm */; };
 		BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */; };
+		C2BE7B1C1E3FD63B16F65FF9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B117FB2D45C49F54240EFFDC /* SettingsView.swift */; };
 		C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */; };
 		D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7544CAB23D252B03FB65F9C /* SBrainApp.swift */; };
 		D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F737901CA8A7C63C9E7127A /* SearchBar.swift */; };
@@ -63,6 +64,7 @@
 		9482AEC43C623300660A97C8 /* SlackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackModels.swift; sourceTree = "<group>"; };
 		99ECA63AFA277F0632CE248B /* SlackAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackAgentView.swift; sourceTree = "<group>"; };
 		A7BD3D89EA799D8E97B3F17E /* SBButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SBButton.swift; sourceTree = "<group>"; };
+		B117FB2D45C49F54240EFFDC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CCF1EC1647C63785F60A824F /* CalendarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStore.swift; sourceTree = "<group>"; };
 		CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendManager.swift; sourceTree = "<group>"; };
 		CEE9E28089788162289A190F /* BrainMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainMapView.swift; sourceTree = "<group>"; };
@@ -192,6 +194,7 @@
 				DB7D097F10003525C94A8B00 /* NoteDetailView.swift */,
 				D74140C2CF4145F55F886B78 /* NoteListView.swift */,
 				3F737901CA8A7C63C9E7127A /* SearchBar.swift */,
+				B117FB2D45C49F54240EFFDC /* SettingsView.swift */,
 				99ECA63AFA277F0632CE248B /* SlackAgentView.swift */,
 				F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */,
 				49E972B848AF4DC605572B68 /* Sidebar */,
@@ -297,6 +300,7 @@
 				3E26E8E01FA80FC9E0286622 /* SBCard.swift in Sources */,
 				D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */,
 				D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */,
+				C2BE7B1C1E3FD63B16F65FF9 /* SettingsView.swift in Sources */,
 				70F356D824E2B23D93108147 /* SidebarIconBar.swift in Sources */,
 				E3784E6ACFF746D679FA858D /* SlackAgentView.swift in Sources */,
 				0D96956D05AA105AF58B4A32 /* SlackExplorerView.swift in Sources */,

@@ -10,6 +10,7 @@ struct SidebarIconBar: View {
     @Binding var isFullTerminal: Bool
     @Binding var showExplorerPanel: Bool
     @Binding var isSearchMode: Bool
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -134,10 +135,13 @@ struct SidebarIconBar: View {
                 }
                 .help(showExplorerPanel ? "탐색 패널 닫기" : "탐색 패널 열기")
 
-                IconBarButton(icon: "gearshape", isActive: false) {
-                    // TODO: settings
+                IconBarButton(icon: "gearshape", isActive: showSettings) {
+                    showSettings = true
                 }
                 .help("설정")
+                .sheet(isPresented: $showSettings) {
+                    SettingsView(isPresented: $showSettings)
+                }
             }
             .padding(.bottom, SB.Space.md)
         }

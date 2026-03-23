@@ -15,12 +15,12 @@ struct CalendarView: View {
             if calendarStore.isAuthenticated {
                 authenticatedContent
             } else {
+                // 인증 화면은 ExplorerPanel(CalendarExplorerView)에서 담당
                 unauthenticatedState
             }
         }
         .background(SB.Colors.bgPrimary)
         .task {
-            await calendarStore.checkAuth()
             if calendarStore.isAuthenticated {
                 await calendarStore.loadCurrentMonth()
             }

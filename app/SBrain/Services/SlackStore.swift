@@ -9,12 +9,14 @@ class SlackStore: ObservableObject {
     @Published var channels: [SlackChannel] = []
     @Published var isConnected = false
     @Published var isScanning = false
+    @Published var isUserAuthenticated = false
+    @Published var userName: String = ""
     @Published var errorMessage: String?
     @Published var selectedChannelId: String?
 
     private let api = APIClient.shared
 
-    /// Check Slack connection status
+    /// Check Slack connection status + user auth
     func checkStatus() async {
         do {
             let status = try await api.slackStatus()
@@ -23,6 +25,27 @@ class SlackStore: ObservableObject {
         } catch {
             isConnected = false
             errorMessage = "Slack 연결 상태 확인 실패"
+        }
+
+        // 사용자 인증 상태 확인
+        do {
+            let user = try await api.slackUser()
+            isUserAuthenticated = user.authenticated
+            userName = user.user?.name ?? ""
+        } catch {
+            isUserAuthenticated = false
+        }
+    }
+
+    /// Slack OAuth 시작 (브라우저 열기)
+    func startAuth() async {
+        do {
+            let authUrl = try await api.slackAuth()
+            if let url = URL(string: authUrl) {
+                NSWorkspace.shared.open(url)
+            }
+        } catch {
+            errorMessage = "Slack 인증 URL 생성 실패"
         }
     }
 

@@ -187,6 +187,36 @@ class APIClient {
         return response.ok
     }
 
+    struct SlackAuthResponse: Codable {
+        let authUrl: String
+
+        enum CodingKeys: String, CodingKey {
+            case authUrl = "auth_url"
+        }
+    }
+
+    func slackAuth() async throws -> String {
+        let url = URL(string: "\(baseURL)/slack/auth/")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(SlackAuthResponse.self, from: data).authUrl
+    }
+
+    struct SlackUserInfo: Codable {
+        let id: String?
+        let name: String?
+    }
+
+    struct SlackUserResponse: Codable {
+        let user: SlackUserInfo?
+        let authenticated: Bool
+    }
+
+    func slackUser() async throws -> SlackUserResponse {
+        let url = URL(string: "\(baseURL)/slack/user/")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(SlackUserResponse.self, from: data)
+    }
+
     struct SlackChannelsResponse: Codable {
         let channels: [SlackChannel]
     }

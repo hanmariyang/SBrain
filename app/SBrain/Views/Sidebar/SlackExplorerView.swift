@@ -15,6 +15,14 @@ struct SlackExplorerView: View {
                 .frame(height: 1)
 
             if slackStore.isConnected {
+                // 사용자 인증 상태
+                if !slackStore.isUserAuthenticated {
+                    userAuthSection
+                    Rectangle()
+                        .fill(SB.Colors.navy100)
+                        .frame(height: 1)
+                }
+
                 // Filter section
                 filterSection
 
@@ -30,6 +38,39 @@ struct SlackExplorerView: View {
         }
     }
 
+    // MARK: - User Auth Section
+
+    private var userAuthSection: some View {
+        VStack(spacing: SB.Space.sm) {
+            HStack(spacing: SB.Space.xs) {
+                Image(systemName: "person.crop.circle.badge.questionmark")
+                    .font(.system(size: 12))
+                    .foregroundStyle(SB.Colors.accentOrange)
+
+                Text("Slack 계정을 연결하세요")
+                    .font(SB.Font.caption())
+                    .foregroundStyle(SB.Colors.navy700)
+
+                Spacer()
+            }
+
+            Button(action: {
+                Task { await slackStore.startAuth() }
+            }) {
+                Label("Slack 로그인", systemImage: "person.badge.key")
+                    .font(SB.Font.caption())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, SB.Space.xs + 2)
+                    .background(SB.Colors.gold600)
+                    .clipShape(RoundedRectangle(cornerRadius: SB.Radius.sm))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, SB.Space.md)
+        .padding(.vertical, SB.Space.sm)
+    }
+
     // MARK: - Connection Status
 
     private var connectionStatus: some View {
@@ -38,9 +79,15 @@ struct SlackExplorerView: View {
                 .fill(slackStore.isConnected ? SB.Colors.accentGreen : SB.Colors.accentRed)
                 .frame(width: 6, height: 6)
 
-            Text(slackStore.isConnected ? "연결됨" : "미연결")
-                .font(SB.Font.caption())
-                .foregroundStyle(SB.Colors.navy500)
+            if slackStore.isUserAuthenticated {
+                Text(slackStore.userName)
+                    .font(SB.Font.caption())
+                    .foregroundStyle(SB.Colors.navy700)
+            } else {
+                Text(slackStore.isConnected ? "연결됨" : "미연결")
+                    .font(SB.Font.caption())
+                    .foregroundStyle(SB.Colors.navy500)
+            }
 
             Spacer()
 

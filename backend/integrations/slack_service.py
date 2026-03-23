@@ -11,10 +11,11 @@ import threading
 import uuid
 from datetime import datetime, timezone
 
-from slack_bolt import App
-from slack_bolt.adapter.socket_mode import SocketModeHandler
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from slack_sdk.socket_mode import SocketModeClient
+from slack_sdk.socket_mode.request import SocketModeRequest
+from slack_sdk.socket_mode.response import SocketModeResponse
 
 logger = logging.getLogger(__name__)
 
@@ -44,27 +45,22 @@ _socket_mode_running = False
 _event_log: list[str] = []
 
 
-def _get_slack_app() -> App:
-    """Slack Bolt App 인스턴스 생성 (Socket Mode 전용)."""
-    bot_token = os.getenv("SLACK_BOT_TOKEN", "")
-    # Socket Mode에서는 signing_secret 불필요
-    app = App(token=bot_token)
+def _socket_mode_handler(client: SocketModeClient, req: SocketModeRequest):
+    """Socket Mode 이벤트 핸들러 (slack_sdk 직접 사용)."""
+    # 이벤트 수신 확인 (Slack에 ACK 응답)
+    client.send_socket_mode_response(SocketModeResponse(envelope_id=req.envelope_id))
 
-    @app.event("message")
-    def handle_message(event, say):
-        """채널/DM/그룹 메시지 수신 처리."""
-        _event_log.append(f"message: {event.get('text', '')[:50]}")
-        logger.info("Socket Mode received message: %s", event.get("text", "")[:50])
-        _store_message(event)
+    if req.type == "events_api":
+        event = req.payload.get("event", {})
+        event_type = event.get("type", "")
 
-    @app.event("app_mention")
-    def handle_mention(event, say):
-        """앱 멘션 이벤트 처리."""
-        _event_log.append(f"mention: {event.get('text', '')[:50]}")
-        logger.info("Socket Mode received mention: %s", event.get("text", "")[:50])
-        _store_message(event, is_mention=True)
+        _event_log.append(f"{event_type}: {event.get('text', '')[:50]}")
+        logger.info("Socket Mode event: type=%s text=%s", event_type, event.get("text", "")[:50])
 
-    return app
+        if event_type == "message":
+            _store_message(event)
+        elif event_type == "app_mention":
+            _store_message(event, is_mention=True)
 
 
 def get_event_log() -> list[str]:
@@ -128,6 +124,7 @@ def start_socket_mode():
     import time
 
     app_token = os.getenv("SLACK_APP_TOKEN", "")
+    bot_token = os.getenv("SLACK_BOT_TOKEN", "")
     if not app_token:
         logger.error("SLACK_APP_TOKEN is not set")
         return
@@ -135,16 +132,24 @@ def start_socket_mode():
     max_retries = 5
     for attempt in range(max_retries):
         try:
-            app = _get_slack_app()
-            handler = SocketModeHandler(app, app_token)
+            # slack_sdk SocketModeClient 직접 사용 (slack_bolt 우회)
+            sm_client = SocketModeClient(
+                app_token=app_token,
+                web_client=WebClient(token=bot_token),
+            )
+            sm_client.socket_mode_request_listeners.append(_socket_mode_handler)
             _socket_mode_running = True
-            logger.info("Starting Slack Socket Mode (attempt %d)...", attempt + 1)
-            handler.start()  # blocking
+            logger.info("Starting Slack Socket Mode via slack_sdk (attempt %d)...", attempt + 1)
+            sm_client.connect()
+
+            # 연결 유지 (blocking)
+            import signal
+            signal.pause()
         except Exception as e:
             _socket_mode_running = False
             logger.error("Socket Mode failed (attempt %d): %s", attempt + 1, e)
             if attempt < max_retries - 1:
-                time.sleep(5)  # 5초 후 재시도
+                time.sleep(5)
             else:
                 logger.error("Socket Mode gave up after %d attempts", max_retries)
 

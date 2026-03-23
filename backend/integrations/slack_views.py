@@ -23,6 +23,8 @@ def slack_scan(request):
     global _last_analysis
 
     try:
+        use_ai = request.query_params.get("ai", "false").lower() == "true"
+
         pending = slack_service.get_pending_messages()
         if not pending:
             return Response({
@@ -39,27 +41,45 @@ def slack_scan(request):
                 info = slack_service.get_user_info(uid)
                 user_cache[uid] = info.get("display_name") or info.get("real_name", uid)
 
-        # AI 분석
-        results = analyze_messages(pending)
+        if use_ai:
+            # AI 분석 모드
+            results = analyze_messages(pending)
+            for r in results:
+                mid = r.get("message_id", "")
+                original = next((m for m in pending if m["id"] == mid), {})
+                r["channel"] = original.get("channel", "")
+                r["channel_name"] = original.get("channel_name", r.get("channel", ""))
+                r["user"] = original.get("user", "")
+                r["user_name"] = user_cache.get(original.get("user", ""), "")
+                r["timestamp"] = original.get("ts", "")
+                r["thread_ts"] = original.get("thread_ts", "")
+                r["text"] = original.get("text", "")
+                r["id"] = mid
+        else:
+            # 수집만 모드 — AI 없이 메시지 그대로 반환
+            results = []
+            for msg in pending:
+                results.append({
+                    "id": msg["id"],
+                    "message_id": msg["id"],
+                    "channel": msg.get("channel", ""),
+                    "channel_name": msg.get("channel_name", ""),
+                    "user": msg.get("user", ""),
+                    "user_name": user_cache.get(msg.get("user", ""), ""),
+                    "text": msg.get("text", ""),
+                    "timestamp": msg.get("ts", ""),
+                    "thread_ts": msg.get("thread_ts", ""),
+                    "urgency": "medium" if msg.get("is_mention") else "low",
+                    "action_type": "reply" if msg.get("is_mention") else "none",
+                    "summary": "",
+                    "draft_reply": "",
+                    "calendar_event": None,
+                })
 
-        # 분석 결과에 channel_name, user_name 추가
-        for r in results:
-            mid = r.get("message_id", "")
-            original = next((m for m in pending if m["id"] == mid), {})
-            r["channel"] = original.get("channel", "")
-            r["channel_name"] = original.get("channel_name", r.get("channel", ""))
-            r["user"] = original.get("user", "")
-            r["user_name"] = user_cache.get(original.get("user", ""), "")
-            r["timestamp"] = original.get("ts", "")
-            r["thread_ts"] = original.get("thread_ts", "")
-            r["text"] = original.get("text", "")
-            r["id"] = mid
-
-        # 분석된 메시지를 처리 완료로 표시
+        # 처리 완료 표시
         processed_ids = [msg["id"] for msg in pending]
         slack_service.mark_processed(processed_ids)
 
-        # 분석 결과 캐시
         _last_analysis = results
 
         return Response({

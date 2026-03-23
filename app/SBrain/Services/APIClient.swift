@@ -136,7 +136,9 @@ class APIClient {
     }
 
     struct SlackScanResponse: Codable {
-        let messages: [SlackMessage]
+        let detail: String?
+        let count: Int?
+        let results: [SlackMessage]?
     }
 
     func slackScan() async throws -> [SlackMessage] {
@@ -145,7 +147,7 @@ class APIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let (data, _) = try await URLSession.shared.data(for: request)
-        return try JSONDecoder().decode(SlackScanResponse.self, from: data).messages
+        return try JSONDecoder().decode(SlackScanResponse.self, from: data).results ?? []
     }
 
     func slackMessages(channel: String? = nil) async throws -> [SlackMessage] {
@@ -254,10 +256,15 @@ class APIClient {
         return response.authUrl
     }
 
+    struct CalendarEventsResponse: Codable {
+        let events: [CalendarEvent]
+        let count: Int?
+    }
+
     func calendarEvents(start: String, end: String) async throws -> [CalendarEvent] {
         let url = URL(string: "\(baseURL)/calendar/events/?start=\(start)&end=\(end)")!
         let (data, _) = try await URLSession.shared.data(from: url)
-        return try JSONDecoder().decode([CalendarEvent].self, from: data)
+        return try JSONDecoder().decode(CalendarEventsResponse.self, from: data).events
     }
 
     struct CalendarCreateEventRequest: Codable {

@@ -7,8 +7,6 @@ struct CalendarView: View {
     @State private var showCreateSheet = false
 
     private let calendar = Calendar.current
-    private let weekdaySymbols = ["일", "월", "화", "수", "목", "금", "토"]
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,127 +26,15 @@ struct CalendarView: View {
     }
 
     // MARK: - Authenticated Content
+    // 캘린더 그리드는 ExplorerPanel(CalendarExplorerView)에서 담당
+    // 메인 영역은 선택된 날짜의 일정 상세만 표시
 
     private var authenticatedContent: some View {
         VStack(spacing: 0) {
-            // Month navigation header
-            monthHeader
-
-            // Calendar grid
-            calendarGrid
-                .padding(.horizontal, SB.Space.lg)
-                .padding(.bottom, SB.Space.md)
-
-            // Divider
-            Rectangle()
-                .fill(SB.Colors.navy100)
-                .frame(height: 1)
-
-            // Selected date events
-            selectedDateEventsSection
-        }
-    }
-
-    // MARK: - Month Header
-
-    private var monthHeader: some View {
-        HStack(spacing: SB.Space.md) {
-            Button(action: { navigateMonth(-1) }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SB.Colors.navy500)
-            }
-            .buttonStyle(.plain)
-
-            Text(monthYearString)
-                .font(SB.Font.titleMd())
-                .foregroundStyle(SB.Colors.navy900)
-
-            Button(action: { navigateMonth(1) }) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(SB.Colors.navy500)
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            Button(action: { calendarStore.selectedDate = Date() }) {
-                Text("오늘")
-                    .font(SB.Font.bodySm())
-                    .foregroundStyle(SB.Colors.gold600)
-                    .padding(.horizontal, SB.Space.md)
-                    .padding(.vertical, SB.Space.xs)
-                    .background(SB.Colors.gold100)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-
-            Button(action: { showCreateSheet = true }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(SB.Colors.gold600)
-            }
-            .buttonStyle(.plain)
-            .help("일정 추가")
-
-            if calendarStore.isLoading {
-                ProgressView()
-                    .scaleEffect(0.5)
-                    .tint(SB.Colors.gold600)
-            }
-        }
-        .padding(.horizontal, SB.Space.lg)
-        .padding(.vertical, SB.Space.md)
-        .background(SB.Colors.bgElevated)
-        .sheet(isPresented: $showCreateSheet) {
-            CalendarCreateEventSheet(isPresented: $showCreateSheet)
-        }
-    }
-
-    // MARK: - Calendar Grid
-
-    private var calendarGrid: some View {
-        VStack(spacing: 0) {
-            // Weekday headers
-            LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(weekdaySymbols, id: \.self) { symbol in
-                    Text(symbol)
-                        .font(SB.Font.caption())
-                        .foregroundStyle(SB.Colors.navy500)
-                        .frame(height: 28)
-                }
-            }
-
-            // Day cells
-            LazyVGrid(columns: columns, spacing: 2) {
-                ForEach(daysInMonth, id: \.self) { date in
-                    if let date = date {
-                        CalendarDayCell(
-                            date: date,
-                            isToday: calendar.isDateInToday(date),
-                            isSelected: calendar.isDate(date, inSameDayAs: calendarStore.selectedDate),
-                            eventCount: calendarStore.events(for: date).count
-                        ) {
-                            calendarStore.selectedDate = date
-                        }
-                    } else {
-                        Color.clear
-                            .frame(height: 44)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Selected Date Events
-
-    private var selectedDateEventsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Section header
-            HStack(spacing: SB.Space.sm) {
+            // Selected date header with create button
+            HStack(spacing: SB.Space.md) {
                 Text(selectedDateString)
-                    .font(SB.Font.titleSm())
+                    .font(SB.Font.titleMd())
                     .foregroundStyle(SB.Colors.navy900)
 
                 let count = calendarStore.eventsForSelectedDate.count
@@ -163,9 +49,42 @@ struct CalendarView: View {
                 }
 
                 Spacer()
+
+                Button(action: { calendarStore.selectedDate = Date() }) {
+                    Text("오늘")
+                        .font(SB.Font.bodySm())
+                        .foregroundStyle(SB.Colors.gold600)
+                        .padding(.horizontal, SB.Space.md)
+                        .padding(.vertical, SB.Space.xs)
+                        .background(SB.Colors.gold100)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { showCreateSheet = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(SB.Colors.gold600)
+                }
+                .buttonStyle(.plain)
+                .help("일정 추가")
+
+                if calendarStore.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.5)
+                        .tint(SB.Colors.gold600)
+                }
             }
             .padding(.horizontal, SB.Space.lg)
             .padding(.vertical, SB.Space.md)
+            .background(SB.Colors.bgElevated)
+            .sheet(isPresented: $showCreateSheet) {
+                CalendarCreateEventSheet(isPresented: $showCreateSheet)
+            }
+
+            Rectangle()
+                .fill(SB.Colors.navy100)
+                .frame(height: 1)
 
             // Events list
             ScrollView {
@@ -180,10 +99,12 @@ struct CalendarView: View {
                     }
                 }
                 .padding(.horizontal, SB.Space.lg)
-                .padding(.bottom, SB.Space.lg)
+                .padding(.vertical, SB.Space.md)
             }
         }
     }
+
+    // monthHeader, calendarGrid, selectedDateEventsSection — ExplorerPanel(CalendarExplorerView)로 이전됨
 
     // MARK: - Empty Events State
 
@@ -254,12 +175,6 @@ struct CalendarView: View {
 
     // MARK: - Helpers
 
-    private var monthYearString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy년 M월"
-        return formatter.string(from: calendarStore.selectedDate)
-    }
-
     private var selectedDateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "M월 d일 (E)"
@@ -267,38 +182,6 @@ struct CalendarView: View {
         return formatter.string(from: calendarStore.selectedDate)
     }
 
-    private func navigateMonth(_ offset: Int) {
-        guard let newDate = calendar.date(byAdding: .month, value: offset, to: calendarStore.selectedDate) else { return }
-        calendarStore.selectedDate = newDate
-        Task { await calendarStore.loadCurrentMonth() }
-    }
-
-    private var daysInMonth: [Date?] {
-        guard let monthInterval = calendar.dateInterval(of: .month, for: calendarStore.selectedDate),
-              let monthRange = calendar.range(of: .day, in: .month, for: calendarStore.selectedDate) else {
-            return []
-        }
-
-        let firstWeekday = calendar.component(.weekday, from: monthInterval.start)
-        // Sunday = 1, so offset = firstWeekday - 1
-        let leadingEmpty = firstWeekday - 1
-
-        var days: [Date?] = Array(repeating: nil, count: leadingEmpty)
-
-        for day in monthRange {
-            if let date = calendar.date(bySetting: .day, value: day, of: monthInterval.start) {
-                days.append(date)
-            }
-        }
-
-        // Pad trailing to complete the last week row
-        let remainder = days.count % 7
-        if remainder > 0 {
-            days.append(contentsOf: Array(repeating: nil as Date?, count: 7 - remainder))
-        }
-
-        return days
-    }
 }
 
 // MARK: - Calendar Day Cell

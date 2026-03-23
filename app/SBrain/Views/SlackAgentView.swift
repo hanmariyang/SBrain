@@ -33,17 +33,23 @@ struct SlackAgentView: View {
 
     // MARK: - Top Bar
 
+    // 연결 상태는 ExplorerPanel(SlackExplorerView)에서 담당
+    // 메인 영역은 스캔 + 메시지 카운트만 표시
     private var slackTopBar: some View {
         HStack(spacing: SB.Space.md) {
-            // Connection status
-            HStack(spacing: SB.Space.sm) {
-                Circle()
-                    .fill(slackStore.isConnected ? SB.Colors.accentGreen : SB.Colors.accentRed)
-                    .frame(width: 7, height: 7)
+            Text("Slack 메시지")
+                .font(SB.Font.titleSm())
+                .foregroundStyle(SB.Colors.navy900)
 
-                Text(slackStore.isConnected ? "Slack 연결됨" : "Slack 미연결")
-                    .font(SB.Font.bodySm())
-                    .foregroundStyle(SB.Colors.navy700)
+            // Message count
+            if !slackStore.filteredMessages.isEmpty {
+                Text("\(slackStore.filteredMessages.count)")
+                    .font(SB.Font.monoSm())
+                    .foregroundStyle(SB.Colors.gold600)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(SB.Colors.gold100)
+                    .clipShape(Capsule())
             }
 
             Spacer()
@@ -54,13 +60,6 @@ struct SlackAgentView: View {
                     .font(SB.Font.caption())
                     .foregroundStyle(SB.Colors.accentRed)
                     .lineLimit(1)
-            }
-
-            // Message count
-            if !slackStore.filteredMessages.isEmpty {
-                Text("\(slackStore.filteredMessages.count)개 메시지")
-                    .font(SB.Font.monoSm())
-                    .foregroundStyle(SB.Colors.navy500)
             }
 
             // Scan button
@@ -123,31 +122,21 @@ struct SlackAgentView: View {
                 )
                 .opacity(0.4)
 
-            if slackStore.isConnected {
-                Text("처리할 메시지가 없습니다")
-                    .font(SB.Font.titleMd())
-                    .foregroundStyle(SB.Colors.navy500)
+            Text("처리할 메시지가 없습니다")
+                .font(SB.Font.titleMd())
+                .foregroundStyle(SB.Colors.navy500)
 
-                Text("스캔 버튼을 눌러 Slack 메시지를 분석하세요")
-                    .font(SB.Font.bodySm())
-                    .foregroundStyle(SB.Colors.navy300)
+            Text("스캔 버튼을 눌러 Slack 메시지를 분석하세요")
+                .font(SB.Font.bodySm())
+                .foregroundStyle(SB.Colors.navy300)
 
-                Button(action: {
-                    Task { await slackStore.scan() }
-                }) {
-                    Label("Slack 스캔", systemImage: "arrow.triangle.2.circlepath")
-                }
-                .buttonStyle(SBGoldButtonStyle())
-                .disabled(slackStore.isScanning)
-            } else {
-                Text("Slack에 연결되지 않았습니다")
-                    .font(SB.Font.titleMd())
-                    .foregroundStyle(SB.Colors.navy500)
-
-                Text("백엔드 설정에서 Slack 연동을 완료하세요")
-                    .font(SB.Font.bodySm())
-                    .foregroundStyle(SB.Colors.navy300)
+            Button(action: {
+                Task { await slackStore.scan() }
+            }) {
+                Label("Slack 스캔", systemImage: "arrow.triangle.2.circlepath")
             }
+            .buttonStyle(SBGoldButtonStyle())
+            .disabled(slackStore.isScanning || !slackStore.isConnected)
 
             Spacer()
         }

@@ -38,6 +38,17 @@ class APIClient {
         return try JSONDecoder().decode(IngestStatus.self, from: data)
     }
 
+    /// 부분 재인덱싱 — 변경/삭제된 파일만 처리
+    func partialIngest(paths: [String], deletedPaths: [String]) async throws {
+        let url = URL(string: "\(baseURL)/ingest/partial/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["paths": paths, "deleted_paths": deletedPaths]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let _ = try await URLSession.shared.data(for: request)
+    }
+
     // MARK: - Recall (Search)
 
     func recall(query: String, limit: Int = 10) async throws -> [SearchResult] {

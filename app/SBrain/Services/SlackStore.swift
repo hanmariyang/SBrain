@@ -9,14 +9,28 @@ class SlackStore: ObservableObject {
     @Published var channels: [SlackChannel] = []
     @Published var isConnected = false
     @Published var isScanning = false
-    @Published var isUserAuthenticated = false
-    @Published var userName: String = ""
+    @Published var isUserAuthenticated = false {
+        didSet { cachedAuth = isUserAuthenticated }
+    }
+    @Published var userName: String = "" {
+        didSet { cachedUserName = userName }
+    }
     @Published var errorMessage: String?
     @Published var selectedChannelId: String?
+
+    // 인증 상태 로컬 캐시 (앱 재시작 시 즉시 UI 반영)
+    @AppStorage("sbrain.slack.authenticated") private var cachedAuth = false
+    @AppStorage("sbrain.slack.userName") private var cachedUserName = ""
 
     private let api = APIClient.shared
     private var pollingTask: Task<Void, Never>?
     private var dismissedIds: Set<String> = []
+
+    init() {
+        // 캐시된 인증 상태 복원 (백엔드 확인 전까지 UI에 표시)
+        isUserAuthenticated = cachedAuth
+        userName = cachedUserName
+    }
 
     /// Check Slack connection status + user auth
     func checkStatus() async {

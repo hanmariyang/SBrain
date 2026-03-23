@@ -92,9 +92,10 @@ def slack_oauth_callback(request):
         user_id = authed_user.get("id", "")
 
         if user_id:
-            # 사용자 정보 저장
+            # 사용자 정보 저장 (인메모리 + 파일 영속화)
             user_info = slack_service.set_current_user(user_id)
             user_name = user_info.get("display_name") or user_info.get("real_name", user_id)
+            slack_service.save_user(user_id, user_name)
             return HttpResponse(
                 _html_page(
                     "Slack 연동 완료",

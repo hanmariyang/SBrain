@@ -123,3 +123,63 @@ def _do_ingest(folder_path: str):
             _ingest_state["done"] += 1
 
     logger.info(f"Ingest complete: {len(all_files)} files processed")
+
+
+def partial_ingest_files(paths: list[str], deleted_paths: list[str]) -> dict:
+    """변경된 파일만 부분 인덱싱. 동기 실행 (파일 수가 적으므로)."""
+    updated = 0
+    deleted = 0
+    errors = []
+
+    # 1. 삭제된 파일 처리
+    for file_path in deleted_paths:
+        try:
+            note_id = Note.make_id(file_path)
+            Chunk.objects.filter(note_id=note_id).delete()
+            Note.objects.filter(id=note_id).delete()
+            deleted += 1
+        except Exception as e:
+            errors.append({"path": file_path, "error": str(e)})
+
+    # 2. 추가/수정된 파일 처리
+    for file_path in paths:
+        try:
+            file_path_obj = Path(file_path)
+            if not file_path_obj.exists():
+                continue
+
+            content = file_path_obj.read_text(encoding="utf-8")
+            note_id = Note.make_id(file_path)
+
+            # Note upsert
+            Note.objects.update_or_create(
+                id=note_id,
+                defaults={
+                    "path": file_path,
+                    "filename": file_path_obj.name,
+                    "content": content,
+                },
+            )
+
+            # 기존 Chunk 삭제 후 재생성
+            Chunk.objects.filter(note_id=note_id).delete()
+            chunks = _split_chunks(content)
+
+            if chunks:
+                chunk_objs = [
+                    Chunk(
+                        id=f"{note_id}_{idx}",
+                        note_id=note_id,
+                        chunk_text=chunk_text,
+                        chunk_index=idx,
+                    )
+                    for idx, chunk_text in enumerate(chunks)
+                ]
+                Chunk.objects.bulk_create(chunk_objs)
+
+            updated += 1
+        except Exception as e:
+            errors.append({"path": file_path, "error": str(e)})
+
+    logger.info("Partial ingest: updated=%d, deleted=%d, errors=%d", updated, deleted, len(errors))
+    return {"updated": updated, "deleted": deleted, "errors": errors}

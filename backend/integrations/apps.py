@@ -24,6 +24,14 @@ class IntegrationsConfig(AppConfig):
         slack_app_token = os.getenv("SLACK_APP_TOKEN", "")
         slack_bot_token = os.getenv("SLACK_BOT_TOKEN", "")
 
+        # 저장된 Slack 사용자 복원
+        from .slack_service import load_user, set_current_user
+
+        saved = load_user()
+        if saved:
+            set_current_user(saved["user_id"])
+            logger.info("Restored Slack user: %s", saved.get("user_name", saved["user_id"]))
+
         if slack_app_token and slack_bot_token:
             from .slack_service import start_socket_mode
 

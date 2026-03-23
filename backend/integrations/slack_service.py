@@ -142,9 +142,9 @@ def start_socket_mode():
             logger.info("Starting Slack Socket Mode via slack_sdk (attempt %d)...", attempt + 1)
             sm_client.connect()
 
-            # 연결 유지 (blocking)
-            import signal
-            signal.pause()
+            # 연결 유지 (daemon 스레드에서도 동작하는 blocking)
+            _stop_event = threading.Event()
+            _stop_event.wait()  # 무한 대기
         except Exception as e:
             _socket_mode_running = False
             logger.error("Socket Mode failed (attempt %d): %s", attempt + 1, e)

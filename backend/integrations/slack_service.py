@@ -41,26 +41,35 @@ _socket_mode_running = False
 # ── Slack App 초기화 ─────────────────────────────────────────
 
 
+_event_log: list[str] = []
+
+
 def _get_slack_app() -> App:
-    """Slack Bolt App 인스턴스 생성."""
+    """Slack Bolt App 인스턴스 생성 (Socket Mode 전용)."""
     bot_token = os.getenv("SLACK_BOT_TOKEN", "")
-    signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
-    app = App(
-        token=bot_token,
-        signing_secret=signing_secret,
-    )
+    # Socket Mode에서는 signing_secret 불필요
+    app = App(token=bot_token)
 
     @app.event("message")
     def handle_message(event, say):
         """채널/DM/그룹 메시지 수신 처리."""
+        _event_log.append(f"message: {event.get('text', '')[:50]}")
+        logger.info("Socket Mode received message: %s", event.get("text", "")[:50])
         _store_message(event)
 
     @app.event("app_mention")
     def handle_mention(event, say):
         """앱 멘션 이벤트 처리."""
+        _event_log.append(f"mention: {event.get('text', '')[:50]}")
+        logger.info("Socket Mode received mention: %s", event.get("text", "")[:50])
         _store_message(event, is_mention=True)
 
     return app
+
+
+def get_event_log() -> list[str]:
+    """Socket Mode 이벤트 수신 로그 반환."""
+    return list(_event_log[-20:])
 
 
 def _store_message(event: dict, is_mention: bool = False):

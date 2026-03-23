@@ -168,6 +168,8 @@ def slack_debug(request):
     debug_info = {
         "settings": settings,
         "is_running": slack_service.is_running(),
+        "event_log": slack_service.get_event_log(),
+        "in_memory_count": len(slack_service._messages),
         "collected": [],
         "skipped": [],
     }

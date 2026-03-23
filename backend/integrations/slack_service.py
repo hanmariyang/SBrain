@@ -172,7 +172,7 @@ def _fetch_recent_messages():
             types="public_channel,private_channel,im",
             limit=50,
         )
-        channels = result.get("channels", [])
+        channels = result.data.get("channels", []) if hasattr(result, 'data') else result.get("channels", [])
 
         for ch in channels:
             ch_id = ch.get("id", "")
@@ -183,7 +183,8 @@ def _fetch_recent_messages():
                     channel=ch_id,
                     limit=20,
                 )
-                for msg in history.get("messages", []):
+                messages_list = history.data.get("messages", []) if hasattr(history, 'data') else history.get("messages", [])
+                for msg in messages_list:
                     # bot 메시지 무시
                     if msg.get("bot_id") or msg.get("subtype"):
                         continue
@@ -233,7 +234,9 @@ def _fetch_recent_messages():
                 continue
 
     except SlackApiError as e:
-        logger.error("Failed to fetch recent messages: %s", e.response.get("error", str(e)))
+        logger.error("Failed to fetch recent messages (SlackApiError): %s", e.response.get("error", str(e)))
+    except Exception as e:
+        logger.error("Failed to fetch recent messages (unexpected): %s", e, exc_info=True)
 
 
 def mark_processed(message_ids: list[str]):

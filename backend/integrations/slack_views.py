@@ -134,35 +134,66 @@ def slack_status(request):
 
 @api_view(["GET"])
 def slack_debug(request):
-    """디버그: 메시지 수집 상태 확인."""
+    """디버그: 메시지 수집 직접 테스트."""
     from slack_sdk import WebClient
-    import os
+    import os, uuid
 
     bot_token = os.getenv("SLACK_BOT_TOKEN", "")
     client = WebClient(token=bot_token)
 
+    settings = slack_service.get_filter_settings()
+    keywords = settings.get("keywords", [])
+    my_user_id = settings.get("user_id", "")
+
     debug_info = {
-        "settings": slack_service.get_filter_settings(),
+        "settings": settings,
         "is_running": slack_service.is_running(),
+        "collected": [],
+        "skipped": [],
     }
 
     try:
         conv = client.users_conversations(types="public_channel,private_channel,im", limit=10)
         channels = conv.get("channels", [])
-        debug_info["bot_channels"] = [{"id": c["id"], "name": c.get("name", c["id"]), "is_im": c.get("is_im", False)} for c in channels[:5]]
+        debug_info["channels_count"] = len(channels)
 
-        # 첫 번째 비-IM 채널의 메시지 확인
         for ch in channels:
-            if not ch.get("is_im"):
-                ch_id = ch["id"]
-                hist = client.conversations_history(channel=ch_id, limit=3)
-                msgs = hist.get("messages", [])
-                debug_info["sample_channel"] = ch.get("name", ch_id)
-                debug_info["sample_messages"] = [
-                    {"user": m.get("user","?"), "text": m.get("text","")[:80], "subtype": m.get("subtype"), "bot_id": m.get("bot_id")}
-                    for m in msgs
-                ]
-                break
+            ch_id = ch.get("id", "")
+            ch_name = ch.get("name", ch_id)
+            is_im = ch.get("is_im", False)
+
+            try:
+                hist = client.conversations_history(channel=ch_id, limit=5)
+                for msg in hist.get("messages", []):
+                    text = msg.get("text", "")
+                    msg_user = msg.get("user", "")
+                    subtype = msg.get("subtype")
+                    bot_id = msg.get("bot_id")
+
+                    skip_reason = None
+                    if bot_id or subtype:
+                        skip_reason = f"bot_id={bot_id} subtype={subtype}"
+                    elif my_user_id:
+                        is_mention = f"<@{my_user_id}>" in text
+                        has_kw = keywords and any(k.lower() in text.lower() for k in keywords)
+                        if msg_user == my_user_id and not has_kw:
+                            skip_reason = "self_message_no_keyword"
+                        elif not (is_im or is_mention or has_kw):
+                            skip_reason = "no_match"
+                    else:
+                        if keywords:
+                            has_kw = any(k.lower() in text.lower() for k in keywords)
+                            if not has_kw:
+                                skip_reason = "keyword_no_match"
+
+                    entry = {"ch": ch_name, "user": msg_user, "text": text[:60], "reason": skip_reason}
+                    if skip_reason:
+                        debug_info["skipped"].append(entry)
+                    else:
+                        debug_info["collected"].append(entry)
+            except Exception as e:
+                debug_info["skipped"].append({"ch": ch_name, "error": str(e)})
+
     except Exception as e:
         debug_info["error"] = str(e)
 

@@ -16,4 +16,4 @@ RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
 EXPOSE ${PORT:-8765}
 
-CMD ["sh", "-c", "python manage.py migrate --run-syncdb 2>/dev/null; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8765} --workers 1 --threads 4 --timeout 120 --preload"]
+CMD ["sh", "-c", "python manage.py migrate --run-syncdb 2>/dev/null; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8765} --workers 1 --threads 4 --timeout 120"]

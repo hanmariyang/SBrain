@@ -114,23 +114,30 @@ def _store_message(event: dict, is_mention: bool = False):
 
 
 def start_socket_mode():
-    """Socket Mode WebSocket 리스너를 시작한다 (blocking)."""
+    """Socket Mode WebSocket 리스너를 시작한다 (blocking, 재시도 포함)."""
     global _socket_mode_running
+    import time
 
     app_token = os.getenv("SLACK_APP_TOKEN", "")
     if not app_token:
         logger.error("SLACK_APP_TOKEN is not set")
         return
 
-    try:
-        app = _get_slack_app()
-        handler = SocketModeHandler(app, app_token)
-        _socket_mode_running = True
-        logger.info("Starting Slack Socket Mode...")
-        handler.start()  # blocking
-    except Exception as e:
-        _socket_mode_running = False
-        logger.error("Socket Mode failed: %s", e)
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            app = _get_slack_app()
+            handler = SocketModeHandler(app, app_token)
+            _socket_mode_running = True
+            logger.info("Starting Slack Socket Mode (attempt %d)...", attempt + 1)
+            handler.start()  # blocking
+        except Exception as e:
+            _socket_mode_running = False
+            logger.error("Socket Mode failed (attempt %d): %s", attempt + 1, e)
+            if attempt < max_retries - 1:
+                time.sleep(5)  # 5초 후 재시도
+            else:
+                logger.error("Socket Mode gave up after %d attempts", max_retries)
 
 
 def is_running() -> bool:

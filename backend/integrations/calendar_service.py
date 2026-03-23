@@ -182,27 +182,41 @@ def is_authenticated() -> bool:
 
 def list_events(start: str, end: str) -> list[dict]:
     """
-    지정 기간의 캘린더 이벤트 목록 조회.
-
-    Args:
-        start: ISO 8601 형식 시작 시간 (예: 2024-01-01T00:00:00Z)
-        end: ISO 8601 형식 종료 시간
+    지정 기간의 모든 캘린더 이벤트 목록 조회.
+    본인이 포함된 모든 캘린더(primary + 공유 + 구독)에서 가져온다.
     """
     try:
         service = _get_service()
-        result = service.events().list(
-            calendarId="primary",
-            timeMin=start,
-            timeMax=end,
-            singleEvents=True,
-            orderBy="startTime",
-            maxResults=100,
-        ).execute()
 
-        events = []
-        for item in result.get("items", []):
-            events.append(_format_event(item))
-        return events
+        # 모든 캘린더 목록 조회
+        calendar_list = service.calendarList().list().execute()
+        calendars = calendar_list.get("items", [])
+
+        all_events = []
+        for cal in calendars:
+            cal_id = cal.get("id", "")
+            cal_name = cal.get("summary", "")
+            try:
+                result = service.events().list(
+                    calendarId=cal_id,
+                    timeMin=start,
+                    timeMax=end,
+                    singleEvents=True,
+                    orderBy="startTime",
+                    maxResults=250,
+                ).execute()
+
+                for item in result.get("items", []):
+                    event = _format_event(item)
+                    event["calendar_name"] = cal_name
+                    all_events.append(event)
+            except HttpError:
+                # 권한 없는 캘린더는 건너뜀
+                continue
+
+        # 시작 시간 기준 정렬
+        all_events.sort(key=lambda e: e.get("start", ""))
+        return all_events
 
     except HttpError as e:
         logger.error("Google Calendar API error: %s", e)

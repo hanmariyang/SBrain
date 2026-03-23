@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8765
+RUN python manage.py collectstatic --noinput 2>/dev/null || true
 
-CMD ["sh", "-c", "python manage.py migrate --run-syncdb 2>/dev/null; python manage.py runserver 0.0.0.0:8765 --noreload"]
+EXPOSE ${PORT:-8765}
+
+CMD ["sh", "-c", "python manage.py migrate --run-syncdb 2>/dev/null; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8765} --workers 2 --timeout 120"]

@@ -14,18 +14,23 @@ SECRET_KEY = os.getenv(
 
 DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+# CORS — macOS 앱에서 서버로 직접 호출
+CORS_ALLOW_ALL_ORIGINS = True
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.staticfiles",
     "rest_framework",
+    "corsheaders",
     "notes",
     "integrations",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
 ]
 
@@ -46,6 +51,12 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# 서버 URL (Railway 배포 시 설정)
+SERVER_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+if SERVER_URL:
+    SERVER_URL = f"https://{SERVER_URL}"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

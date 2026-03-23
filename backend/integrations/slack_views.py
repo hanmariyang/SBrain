@@ -4,6 +4,8 @@ Slack 연동 API 뷰.
 메시지 스캔, 분석 결과 조회, 답장, 채널 목록, 상태 확인, 필터 설정.
 """
 
+import os
+
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -106,6 +108,37 @@ def slack_status(request):
         "connected": slack_service.is_running(),
         "pending_count": len(slack_service.get_pending_messages()),
     })
+
+
+@api_view(["GET"])
+def slack_auth(request):
+    """Slack OAuth 인증 URL 반환. 사용자 식별용."""
+    from django.conf import settings as django_settings
+
+    client_id = os.getenv("SLACK_CLIENT_ID", "")
+    server_url = getattr(django_settings, "SERVER_URL", "") or "http://localhost:8765"
+    redirect_uri = f"{server_url}/api/slack/auth/callback/"
+
+    if not client_id:
+        return Response(
+            {"error": "SLACK_CLIENT_ID is not configured"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    auth_url = (
+        f"https://slack.com/oauth/v2/authorize"
+        f"?client_id={client_id}"
+        f"&user_scope=identity.basic"
+        f"&redirect_uri={redirect_uri}"
+    )
+    return Response({"auth_url": auth_url})
+
+
+@api_view(["GET"])
+def slack_user(request):
+    """현재 설정된 Slack 사용자 정보 반환."""
+    user = slack_service.get_current_user()
+    return Response({"user": user, "authenticated": bool(user.get("id"))})
 
 
 @api_view(["GET", "PUT"])

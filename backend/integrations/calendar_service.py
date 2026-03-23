@@ -25,8 +25,11 @@ _TOKENS_PATH = Path(__file__).resolve().parent.parent / ".google_tokens.json"
 # OAuth 스코프
 _SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
-# OAuth 리다이렉트 URI (로컬 콜백)
-_REDIRECT_URI = "http://localhost:8765/api/calendar/auth/callback/"
+def _get_redirect_uri() -> str:
+    """서버 URL에 맞는 OAuth 리다이렉트 URI 반환."""
+    from django.conf import settings as django_settings
+    server_url = getattr(django_settings, "SERVER_URL", "") or "http://localhost:8765"
+    return f"{server_url}/api/calendar/auth/callback/"
 
 
 def _get_client_config() -> dict:
@@ -43,7 +46,7 @@ def _get_client_config() -> dict:
             "client_secret": client_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [_REDIRECT_URI],
+            "redirect_uris": [_get_redirect_uri()],
         }
     }
 
@@ -108,7 +111,7 @@ def get_auth_url() -> str:
     flow = Flow.from_client_config(
         client_config,
         scopes=_SCOPES,
-        redirect_uri=_REDIRECT_URI,
+        redirect_uri=_get_redirect_uri(),
     )
     auth_url, _ = flow.authorization_url(
         access_type="offline",
@@ -125,7 +128,7 @@ def exchange_code(code: str) -> bool:
         flow = Flow.from_client_config(
             client_config,
             scopes=_SCOPES,
-            redirect_uri=_REDIRECT_URI,
+            redirect_uri=_get_redirect_uri(),
         )
         flow.fetch_token(code=code)
         creds = flow.credentials

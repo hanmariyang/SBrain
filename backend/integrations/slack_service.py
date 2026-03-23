@@ -30,6 +30,8 @@ _settings_lock = threading.Lock()
 _filter_settings: dict = {
     "channels": [],   # 빈 리스트 = 모든 채널
     "keywords": [],   # 빈 리스트 = 키워드 필터 없음
+    "user_id": "",    # 연동된 Slack 사용자 ID
+    "user_name": "",  # 사용자 이름
 }
 
 # ── Socket Mode 상태 ─────────────────────────────────────────
@@ -70,12 +72,22 @@ def _store_message(event: dict, is_mention: bool = False):
     with _settings_lock:
         allowed_channels = _filter_settings["channels"]
         keywords = _filter_settings["keywords"]
+        my_user_id = _filter_settings["user_id"]
 
-    if allowed_channels and channel not in allowed_channels:
-        return
+    # 사용자 ID가 설정된 경우: 멘션 또는 DM만 수집
+    if my_user_id:
+        is_dm = event.get("channel_type") == "im"
+        is_my_mention = f"<@{my_user_id}>" in text
+        has_keyword = keywords and any(kw.lower() in text.lower() for kw in keywords)
 
-    if keywords and not any(kw.lower() in text.lower() for kw in keywords):
-        return
+        if not (is_mention or is_dm or is_my_mention or has_keyword):
+            return
+    else:
+        # 사용자 ID 미설정: 기존 로직 (채널/키워드 필터)
+        if allowed_channels and channel not in allowed_channels:
+            return
+        if keywords and not any(kw.lower() in text.lower() for kw in keywords):
+            return
 
     msg = {
         "id": str(uuid.uuid4()),
@@ -198,6 +210,52 @@ def get_user_info(user_id: str) -> dict:
     except SlackApiError as e:
         logger.error("Failed to get user info: %s", e.response["error"])
         return {}
+
+
+def get_workspace_users() -> list[dict]:
+    """워크스페이스의 활성 사용자 목록 반환 (봇 제외)."""
+    bot_token = os.getenv("SLACK_BOT_TOKEN", "")
+    client = WebClient(token=bot_token)
+
+    try:
+        result = client.users_list()
+        users = []
+        for member in result.get("members", []):
+            if member.get("deleted") or member.get("is_bot") or member.get("id") == "USLACKBOT":
+                continue
+            profile = member.get("profile", {})
+            users.append({
+                "id": member["id"],
+                "name": member.get("name", ""),
+                "real_name": member.get("real_name", ""),
+                "display_name": profile.get("display_name", "") or member.get("real_name", ""),
+                "avatar": profile.get("image_72", ""),
+            })
+        return sorted(users, key=lambda u: u["display_name"])
+    except SlackApiError as e:
+        logger.error("Failed to list users: %s", e.response["error"])
+        return []
+
+
+def set_current_user(user_id: str) -> dict:
+    """현재 사용자를 설정하고 프로필 정보 반환."""
+    info = get_user_info(user_id)
+    if info and info.get("id"):
+        with _settings_lock:
+            _filter_settings["user_id"] = info["id"]
+            _filter_settings["user_name"] = info.get("display_name") or info.get("real_name", "")
+        return info
+    return {}
+
+
+def get_current_user() -> dict:
+    """현재 설정된 사용자 정보 반환."""
+    with _settings_lock:
+        uid = _filter_settings["user_id"]
+        uname = _filter_settings["user_name"]
+    if uid:
+        return {"id": uid, "name": uname}
+    return {}
 
 
 def get_filter_settings() -> dict:

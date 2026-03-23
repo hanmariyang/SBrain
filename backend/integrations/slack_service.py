@@ -201,8 +201,9 @@ def _fetch_recent_messages():
                     if my_user_id:
                         is_my_mention = f"<@{my_user_id}>" in text
                         has_keyword = keywords and any(kw.lower() in text.lower() for kw in keywords)
-                        # 본인이 보낸 메시지는 제외
-                        if msg_user == my_user_id and not is_im:
+
+                        # 본인이 보낸 일반 메시지는 제외 (키워드 매칭은 허용)
+                        if msg_user == my_user_id and not has_keyword:
                             continue
                         if not (is_im or is_my_mention or has_keyword):
                             continue

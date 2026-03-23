@@ -12,11 +12,6 @@ urlpatterns = [
     path("slack/settings/", slack_views.slack_settings, name="slack-settings"),
     # Google Calendar
     path("calendar/auth/", calendar_views.calendar_auth, name="calendar-auth"),
-    path(
-        "calendar/auth/callback/",
-        calendar_views.calendar_auth_callback,
-        name="calendar-auth-callback",
-    ),
     path("calendar/status/", calendar_views.calendar_status, name="calendar-status"),
     path("calendar/events/", calendar_views.calendar_events, name="calendar-events"),
     path(

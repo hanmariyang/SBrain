@@ -4,6 +4,7 @@ Google Calendar 연동 API 뷰.
 OAuth 인증 플로우, 이벤트 CRUD.
 """
 
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -29,29 +30,36 @@ def calendar_auth(request):
         )
 
 
-@api_view(["GET"])
 def calendar_auth_callback(request):
-    """Google OAuth 콜백 처리. 인증 코드를 토큰으로 교환."""
-    code = request.query_params.get("code", "")
+    """Google OAuth 콜백 처리. 브라우저에서 직접 호출되므로 HTML 반환."""
+    code = request.GET.get("code", "")
     if not code:
-        return Response(
-            {"error": "Authorization code is required"},
-            status=status.HTTP_400_BAD_REQUEST,
+        return HttpResponse(
+            "<html><body><h2>인증 실패</h2><p>Authorization code가 없습니다.</p></body></html>",
+            content_type="text/html",
         )
 
     try:
         success = calendar_service.exchange_code(code)
         if success:
-            return Response({"detail": "Google Calendar authenticated successfully"})
+            return HttpResponse(
+                "<html><body style='font-family:system-ui;text-align:center;padding:60px;'>"
+                "<h2 style='color:#1B2A4A;'>Google Calendar 연동 완료</h2>"
+                "<p style='color:#6B7B9A;'>이 창을 닫고 SBrain으로 돌아가세요.</p>"
+                "<script>setTimeout(()=>window.close(),2000)</script>"
+                "</body></html>",
+                content_type="text/html",
+            )
         else:
-            return Response(
-                {"error": "Failed to exchange authorization code"},
-                status=status.HTTP_400_BAD_REQUEST,
+            return HttpResponse(
+                "<html><body><h2>인증 실패</h2><p>토큰 교환에 실패했습니다.</p></body></html>",
+                content_type="text/html",
             )
     except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        return HttpResponse(
+            f"<html><body><h2>오류 발생</h2><p>{e}</p></body></html>",
+            content_type="text/html",
+            status=500,
         )
 
 

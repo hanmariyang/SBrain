@@ -99,6 +99,18 @@ struct SidebarIconBar: View {
                 }
                 .help("데이터베이스")
 
+                IconBarButton(icon: "calendar", isActive: viewMode == .calendar && !isFullTerminal) {
+                    isFullTerminal = false
+                    viewMode = .calendar
+                }
+                .help("캘린더")
+
+                IconBarButton(icon: "number.square", isActive: viewMode == .slack && !isFullTerminal) {
+                    isFullTerminal = false
+                    viewMode = .slack
+                }
+                .help("슬랙")
+
                 IconBarButton(icon: "terminal", isActive: showBottomTerminal || isFullTerminal) {
                     if isFullTerminal {
                         isFullTerminal = false

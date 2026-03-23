@@ -117,4 +117,138 @@ class APIClient {
         return try JSONDecoder().decode(BrainGraph.self, from: data)
     }
 
+    // MARK: - Slack
+
+    struct SlackStatusResponse: Codable {
+        let connected: Bool
+        let workspace: String?
+    }
+
+    func slackStatus() async throws -> SlackStatusResponse {
+        let url = URL(string: "\(baseURL)/slack/status/")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(SlackStatusResponse.self, from: data)
+    }
+
+    struct SlackScanResponse: Codable {
+        let messages: [SlackMessage]
+    }
+
+    func slackScan() async throws -> [SlackMessage] {
+        let url = URL(string: "\(baseURL)/slack/scan/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(SlackScanResponse.self, from: data).messages
+    }
+
+    func slackMessages(channel: String? = nil) async throws -> [SlackMessage] {
+        var urlString = "\(baseURL)/slack/messages/"
+        if let channel = channel {
+            urlString += "?channel=\(channel)"
+        }
+        let url = URL(string: urlString)!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([SlackMessage].self, from: data)
+    }
+
+    struct SlackReplyRequest: Codable {
+        let messageId: String
+        let channel: String
+        let threadTs: String?
+        let text: String
+
+        enum CodingKeys: String, CodingKey {
+            case channel, text
+            case messageId = "message_id"
+            case threadTs = "thread_ts"
+        }
+    }
+
+    struct SlackReplyResponse: Codable {
+        let ok: Bool
+    }
+
+    func slackReply(messageId: String, channel: String, threadTs: String?, text: String) async throws -> Bool {
+        let url = URL(string: "\(baseURL)/slack/reply/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body = SlackReplyRequest(messageId: messageId, channel: channel, threadTs: threadTs, text: text)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(SlackReplyResponse.self, from: data)
+        return response.ok
+    }
+
+    func slackChannels() async throws -> [SlackChannel] {
+        let url = URL(string: "\(baseURL)/slack/channels/")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([SlackChannel].self, from: data)
+    }
+
+    // MARK: - Calendar
+
+    struct CalendarAuthStatusResponse: Codable {
+        let authenticated: Bool
+    }
+
+    func calendarStatus() async throws -> CalendarAuthStatusResponse {
+        let url = URL(string: "\(baseURL)/calendar/status/")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode(CalendarAuthStatusResponse.self, from: data)
+    }
+
+    struct CalendarAuthResponse: Codable {
+        let authUrl: String
+
+        enum CodingKeys: String, CodingKey {
+            case authUrl = "auth_url"
+        }
+    }
+
+    func calendarAuth() async throws -> String {
+        let url = URL(string: "\(baseURL)/calendar/auth/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(CalendarAuthResponse.self, from: data)
+        return response.authUrl
+    }
+
+    func calendarEvents(start: String, end: String) async throws -> [CalendarEvent] {
+        let url = URL(string: "\(baseURL)/calendar/events/?start=\(start)&end=\(end)")!
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([CalendarEvent].self, from: data)
+    }
+
+    struct CalendarCreateEventRequest: Codable {
+        let title: String
+        let start: String
+        let end: String
+        let description: String?
+        let location: String?
+        let attendees: [String]?
+    }
+
+    func calendarCreateEvent(title: String, start: String, end: String, description: String? = nil, location: String? = nil, attendees: [String]? = nil) async throws -> CalendarEvent {
+        let url = URL(string: "\(baseURL)/calendar/events/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body = CalendarCreateEventRequest(title: title, start: start, end: end, description: description, location: location, attendees: attendees)
+        request.httpBody = try JSONEncoder().encode(body)
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONDecoder().decode(CalendarEvent.self, from: data)
+    }
+
+    func calendarDeleteEvent(id: String) async throws {
+        let url = URL(string: "\(baseURL)/calendar/events/\(id)/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        let _ = try await URLSession.shared.data(for: request)
+    }
+
 }

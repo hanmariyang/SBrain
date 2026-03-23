@@ -15,6 +15,7 @@ backend/*.db
 # Environment
 .env
 backend/.env
+backend/.google_tokens.json
 
 # macOS
 .DS_Store

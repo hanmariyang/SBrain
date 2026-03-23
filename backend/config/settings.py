@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "notes",
+    "integrations",
 ]
 
 MIDDLEWARE = [
@@ -61,3 +62,12 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY", "")  # Separate key for Voyage AI embeddings
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "voyage-3")
 EMBEDDING_DIMENSION = 1024  # voyage-3 dimension
+
+# Slack integration
+SLACK_APP_TOKEN = os.getenv("SLACK_APP_TOKEN", "")
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN", "")
+SLACK_SIGNING_SECRET = os.getenv("SLACK_SIGNING_SECRET", "")
+
+# Google Calendar integration
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")

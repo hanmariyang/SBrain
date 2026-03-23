@@ -3,13 +3,13 @@
     <channel>
         <title>SBrain</title>
         <item>
-            <title>1.0</title>
-            <pubDate>Mon, 23 Mar 2026 15:14:47 +0000</pubDate>
-            <sparkle:version>1</sparkle:version>
-            <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+            <title>0.7.1</title>
+            <pubDate>Mon, 23 Mar 2026 15:22:11 +0000</pubDate>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>0.7.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/hanmariyang/SBrain/releases/download/v0.7.0/SBrain-0.7.0.dmg" length="3769937" type="application/octet-stream" sparkle:edSignature="kTGvuD+x/cpXYzzd0OfBqMbLi+Eqrx73jAk2JRZKwPoWk8Cnk89a37Ar1B4snDWnSJhzPS6HcysBgZRCMhxdCw=="/>
+            <enclosure url="https://github.com/hanmariyang/SBrain/releases/download/v0.7.1/SBrain-0.7.1.dmg" length="3769941" type="application/octet-stream" sparkle:edSignature="nRSt2bo3a1xeVK79xdWTHr0jd3ki9+G0OMeTOkrGRvcg+eBuDfERpssMU+AoiDncLoPhzsH45xKq/k7sw4n9Ag=="/>
         </item>
     </channel>
 </rss>

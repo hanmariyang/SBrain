@@ -13,7 +13,6 @@ from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -106,32 +105,53 @@ def _get_service():
 
 
 def get_auth_url() -> str:
-    """Google OAuth 인증 URL 생성."""
-    client_config = _get_client_config()
-    flow = Flow.from_client_config(
-        client_config,
-        scopes=_SCOPES,
-        redirect_uri=_get_redirect_uri(),
-    )
-    auth_url, _ = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
-        prompt="consent",
-    )
-    return auth_url
+    """Google OAuth 인증 URL 생성 (PKCE 미사용, 서버 사이드 flow)."""
+    import urllib.parse
+
+    client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    if not client_id:
+        raise ValueError("GOOGLE_CLIENT_ID is required")
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": _get_redirect_uri(),
+        "response_type": "code",
+        "scope": " ".join(_SCOPES),
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+    return f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
 
 
 def exchange_code(code: str) -> bool:
     """OAuth 인증 코드를 토큰으로 교환하고 저장."""
+    import requests as req
+
     try:
-        client_config = _get_client_config()
-        flow = Flow.from_client_config(
-            client_config,
+        client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+
+        resp = req.post("https://oauth2.googleapis.com/token", data={
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": _get_redirect_uri(),
+            "grant_type": "authorization_code",
+        })
+        token_data = resp.json()
+
+        if "access_token" not in token_data:
+            logger.error("Token exchange failed: %s", token_data)
+            return False
+
+        creds = Credentials(
+            token=token_data["access_token"],
+            refresh_token=token_data.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret=client_secret,
             scopes=_SCOPES,
-            redirect_uri=_get_redirect_uri(),
         )
-        flow.fetch_token(code=code)
-        creds = flow.credentials
         _save_credentials(creds)
         return True
     except Exception as e:

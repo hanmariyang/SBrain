@@ -13,8 +13,17 @@ struct CalendarView: View {
             if calendarStore.isAuthenticated {
                 authenticatedContent
             } else {
-                // 인증 화면은 ExplorerPanel(CalendarExplorerView)에서 담당
-                unauthenticatedState
+                // 인증은 ExplorerPanel(CalendarExplorerView)에서 담당
+                VStack(spacing: SB.Space.md) {
+                    Spacer()
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 24))
+                        .foregroundStyle(SB.Colors.navy300)
+                    Text("사이드바에서 Google 계정을 연결하세요")
+                        .font(SB.Font.bodySm())
+                        .foregroundStyle(SB.Colors.navy500)
+                    Spacer()
+                }
             }
         }
         .background(SB.Colors.bgPrimary)
@@ -128,49 +137,6 @@ struct CalendarView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(SB.Space.lg)
-    }
-
-    // MARK: - Unauthenticated State
-
-    private var unauthenticatedState: some View {
-        VStack(spacing: SB.Space.lg) {
-            Spacer()
-
-            Image(systemName: "calendar.badge.exclamationmark")
-                .font(.system(size: 64))
-                .foregroundStyle(
-                    .linearGradient(
-                        colors: [SB.Colors.navy700, SB.Colors.gold600],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .opacity(0.4)
-
-            Text("Google Calendar 연동")
-                .font(SB.Font.titleMd())
-                .foregroundStyle(SB.Colors.navy900)
-
-            Text("Google 계정을 연결하여\n캘린더 일정을 SBrain에서 관리하세요")
-                .font(SB.Font.bodySm())
-                .foregroundStyle(SB.Colors.navy500)
-                .multilineTextAlignment(.center)
-
-            Button(action: {
-                Task { await calendarStore.startAuth() }
-            }) {
-                Label("Google 계정 연결", systemImage: "link.badge.plus")
-            }
-            .buttonStyle(SBGoldButtonStyle())
-
-            if let error = calendarStore.errorMessage {
-                Text(error)
-                    .font(SB.Font.caption())
-                    .foregroundStyle(SB.Colors.accentRed)
-            }
-
-            Spacer()
-        }
     }
 
     // MARK: - Helpers

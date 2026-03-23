@@ -111,32 +111,35 @@ struct SlackAgentView: View {
         VStack(spacing: SB.Space.lg) {
             Spacer()
 
-            Image(systemName: "number.square")
-                .font(.system(size: 64))
-                .foregroundStyle(
-                    .linearGradient(
-                        colors: [SB.Colors.navy700, SB.Colors.gold600],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .opacity(0.4)
+            if slackStore.isConnected {
+                Image(systemName: "tray")
+                    .font(.system(size: 48))
+                    .foregroundStyle(SB.Colors.navy300)
 
-            Text("처리할 메시지가 없습니다")
-                .font(SB.Font.titleMd())
-                .foregroundStyle(SB.Colors.navy500)
+                Text("처리할 메시지가 없습니다")
+                    .font(SB.Font.titleMd())
+                    .foregroundStyle(SB.Colors.navy500)
 
-            Text("스캔 버튼을 눌러 Slack 메시지를 분석하세요")
-                .font(SB.Font.bodySm())
-                .foregroundStyle(SB.Colors.navy300)
+                Text("스캔 버튼을 눌러 Slack 메시지를 분석하세요")
+                    .font(SB.Font.bodySm())
+                    .foregroundStyle(SB.Colors.navy300)
 
-            Button(action: {
-                Task { await slackStore.scan() }
-            }) {
-                Label("Slack 스캔", systemImage: "arrow.triangle.2.circlepath")
+                Button(action: {
+                    Task { await slackStore.scan() }
+                }) {
+                    Label("Slack 스캔", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(SBGoldButtonStyle())
+                .disabled(slackStore.isScanning)
+            } else {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 24))
+                    .foregroundStyle(SB.Colors.navy300)
+
+                Text("사이드바에서 Slack 연결 상태를 확인하세요")
+                    .font(SB.Font.bodySm())
+                    .foregroundStyle(SB.Colors.navy500)
             }
-            .buttonStyle(SBGoldButtonStyle())
-            .disabled(slackStore.isScanning || !slackStore.isConnected)
 
             Spacer()
         }

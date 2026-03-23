@@ -26,8 +26,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hanmari.sbrain
-        MARKETING_VERSION: "0.6.1"
-        CURRENT_PROJECT_VERSION: 2
+        MARKETING_VERSION: "0.7.0"
+        CURRENT_PROJECT_VERSION: 4
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_ENTITLEMENTS: SBrain/SBrain.entitlements

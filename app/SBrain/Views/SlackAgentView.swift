@@ -27,7 +27,11 @@ struct SlackAgentView: View {
             await slackStore.checkStatus()
             if slackStore.isConnected {
                 await slackStore.loadChannels()
+                slackStore.startPolling()
             }
+        }
+        .onDisappear {
+            slackStore.stopPolling()
         }
     }
 

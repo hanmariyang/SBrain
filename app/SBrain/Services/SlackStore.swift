@@ -15,6 +15,8 @@ class SlackStore: ObservableObject {
     @Published var selectedChannelId: String?
 
     private let api = APIClient.shared
+    private var pollingTask: Task<Void, Never>?
+    private var dismissedIds: Set<String> = []
 
     /// Check Slack connection status + user auth
     func checkStatus() async {
@@ -27,7 +29,6 @@ class SlackStore: ObservableObject {
             errorMessage = "Slack 연결 상태 확인 실패"
         }
 
-        // 사용자 인증 상태 확인
         do {
             let user = try await api.slackUser()
             isUserAuthenticated = user.authenticated
@@ -44,7 +45,6 @@ class SlackStore: ObservableObject {
             if let url = URL(string: authUrl) {
                 NSWorkspace.shared.open(url)
             }
-            // OAuth 완료 대기: 2초 간격으로 30초간 폴링
             for _ in 0..<15 {
                 try await Task.sleep(nanoseconds: 2_000_000_000)
                 let user = try await api.slackUser()
@@ -59,16 +59,45 @@ class SlackStore: ObservableObject {
         }
     }
 
-    /// Scan Slack for actionable messages (AI triage)
+    /// 5초 간격 자동 폴링 시작
+    func startPolling() {
+        guard pollingTask == nil else { return }
+        pollingTask = Task {
+            while !Task.isCancelled {
+                await fetchNewMessages()
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+            }
+        }
+    }
+
+    /// 폴링 중지
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
+
+    /// 서버에서 새 메시지 가져오기 (수동 스캔 대체)
+    func fetchNewMessages() async {
+        guard isConnected else { return }
+        do {
+            let scanned = try await api.slackScan()
+            // 새 메시지만 추가 (기존 + 신규 합치기, dismissed 제외)
+            for msg in scanned {
+                if !dismissedIds.contains(msg.id) && !messages.contains(where: { $0.id == msg.id }) {
+                    messages.append(msg)
+                }
+            }
+            errorMessage = nil
+        } catch {
+            // 폴링 실패는 조용히 처리
+        }
+    }
+
+    /// 수동 스캔 (기존 호환)
     func scan() async {
         isScanning = true
         errorMessage = nil
-        do {
-            let scanned = try await api.slackScan()
-            messages = scanned
-        } catch {
-            errorMessage = "스캔 실패: \(error.localizedDescription)"
-        }
+        await fetchNewMessages()
         isScanning = false
     }
 
@@ -82,8 +111,8 @@ class SlackStore: ObservableObject {
                 text: text
             )
             if ok {
-                // Remove the message from the list after successful reply
                 messages.removeAll { $0.id == messageId }
+                dismissedIds.insert(messageId)
             }
         } catch {
             errorMessage = "답변 전송 실패: \(error.localizedDescription)"
@@ -103,6 +132,7 @@ class SlackStore: ObservableObject {
     /// Dismiss a message (remove from list)
     func dismiss(messageId: String) {
         messages.removeAll { $0.id == messageId }
+        dismissedIds.insert(messageId)
     }
 
     /// Filtered messages by selected channel

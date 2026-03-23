@@ -125,11 +125,10 @@ struct ContentView: View {
             case .list:
                 detailView
             case .database:
-                HSplitView {
-                    DatabaseBrowserView()
-                        .frame(minWidth: 300)
+                if dbStore.isConnected {
                     DBDetailView()
-                        .frame(minWidth: 300)
+                } else {
+                    DatabaseBrowserView()
                 }
             }
         }

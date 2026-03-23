@@ -1,8 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <channel>
-    <title>SBrain Updates</title>
-    <language>ko</language>
-    <description>SBrain macOS 앱 업데이트 피드</description>
-  </channel>
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>SBrain</title>
+        <item>
+            <title>0.6.1</title>
+            <pubDate>Thu, 19 Mar 2026 15:06:07 +0000</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>0.6.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/hanmariyang/SBrain/releases/download/v0.6.1/SBrain-0.6.1.dmg" length="5381192" type="application/octet-stream"/>
+        </item>
+    </channel>
 </rss>

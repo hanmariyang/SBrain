@@ -8,6 +8,8 @@ struct SBrainApp: App {
     @StateObject private var handTracking = HandTrackingManager()
     @StateObject private var dbStore = DatabaseStore()
     @StateObject private var terminalManager = TerminalManager()
+    @StateObject private var slackStore = SlackStore()
+    @StateObject private var calendarStore = CalendarStore()
 
     private let updaterController: SPUStandardUpdaterController
 
@@ -23,6 +25,8 @@ struct SBrainApp: App {
                 .environmentObject(handTracking)
                 .environmentObject(dbStore)
                 .environmentObject(terminalManager)
+                .environmentObject(slackStore)
+                .environmentObject(calendarStore)
                 .onAppear {
                     backendManager.start()
                     // 앱 시작 2초 후 업데이트 자동 확인

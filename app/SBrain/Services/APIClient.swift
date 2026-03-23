@@ -2,7 +2,7 @@ import Foundation
 
 class APIClient {
     static let shared = APIClient()
-    private let baseURL = "http://127.0.0.1:8765/api"
+    private let baseURL = "https://sbrain-production-0f09.up.railway.app/api"
 
     private init() {}
 

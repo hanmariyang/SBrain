@@ -44,7 +44,11 @@ _socket_mode_running = False
 def _get_slack_app() -> App:
     """Slack Bolt App 인스턴스 생성."""
     bot_token = os.getenv("SLACK_BOT_TOKEN", "")
-    app = App(token=bot_token)
+    signing_secret = os.getenv("SLACK_SIGNING_SECRET", "")
+    app = App(
+        token=bot_token,
+        signing_secret=signing_secret,
+    )
 
     @app.event("message")
     def handle_message(event, say):

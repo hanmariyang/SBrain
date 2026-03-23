@@ -89,11 +89,11 @@ def analyze_messages(messages: list[dict]) -> list[dict]:
         return results
 
     except json.JSONDecodeError as e:
-        logger.error("Failed to parse Claude response as JSON: %s", e)
-        return []
+        logger.error("Failed to parse Claude response as JSON: %s (text: %s)", e, result_text[:200] if 'result_text' in dir() else 'N/A')
+        return [{"error": f"JSON parse failed: {e}"}]
     except anthropic.APIError as e:
         logger.error("Anthropic API error: %s", e)
-        return []
+        return [{"error": f"Anthropic API: {e}"}]
     except Exception as e:
-        logger.error("Unexpected error during message analysis: %s", e)
-        return []
+        logger.error("Unexpected error during message analysis: %s", e, exc_info=True)
+        return [{"error": f"Unexpected: {e}"}]

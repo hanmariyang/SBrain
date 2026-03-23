@@ -161,32 +161,42 @@ struct SlackExplorerView: View {
     // MARK: - Disconnected State
 
     private var disconnectedState: some View {
-        VStack(spacing: SB.Space.md) {
-            Spacer().frame(height: SB.Space.xxl)
+        VStack(spacing: SB.Space.lg) {
+            Spacer()
 
             Image(systemName: "number.square")
-                .font(.system(size: 28))
-                .foregroundStyle(SB.Colors.navy300)
+                .font(.system(size: 36))
+                .foregroundStyle(
+                    .linearGradient(
+                        colors: [SB.Colors.navy500, SB.Colors.gold600],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .opacity(0.5)
 
             Text("Slack 미연결")
-                .font(SB.Font.bodySm())
-                .foregroundStyle(SB.Colors.navy500)
+                .font(SB.Font.titleSm())
+                .foregroundStyle(SB.Colors.navy700)
 
-            Text("백엔드에서 Slack\n연동을 설정하세요")
+            Text("백엔드에서 Slack 토큰을\n설정한 후 재시작하세요")
                 .font(SB.Font.caption())
-                .foregroundStyle(SB.Colors.navy300)
+                .foregroundStyle(SB.Colors.navy500)
                 .multilineTextAlignment(.center)
+                .lineSpacing(2)
 
             Button(action: {
                 Task { await slackStore.checkStatus() }
             }) {
-                Label("재확인", systemImage: "arrow.clockwise")
-                    .font(SB.Font.caption())
+                Label("연결 재확인", systemImage: "arrow.clockwise")
+                    .font(SB.Font.bodySm())
             }
             .buttonStyle(SBGoldButtonStyle())
+
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .padding(SB.Space.md)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(SB.Space.lg)
     }
 }
 

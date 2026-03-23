@@ -4,12 +4,16 @@ enum ViewMode: String, CaseIterable {
     case brain = "brain"
     case list = "list"
     case database = "database"
+    case calendar = "calendar"
+    case slack = "slack"
 
     var icon: String {
         switch self {
         case .brain: return "brain"
         case .list: return "list.bullet"
         case .database: return "cylinder.split.1x2"
+        case .calendar: return "calendar"
+        case .slack: return "number.square"
         }
     }
 
@@ -18,6 +22,8 @@ enum ViewMode: String, CaseIterable {
         case .brain: return "Brain Map"
         case .list: return "List"
         case .database: return "Database"
+        case .calendar: return "캘린더"
+        case .slack: return "슬랙"
         }
     }
 }
@@ -109,7 +115,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var mainContentView: some View {
-        if !noteStore.hasProjects && viewMode != .database {
+        if !noteStore.hasProjects && viewMode != .database && viewMode != .calendar && viewMode != .slack {
             emptyState
         } else {
             switch viewMode {
@@ -130,6 +136,10 @@ struct ContentView: View {
                 } else {
                     DatabaseBrowserView()
                 }
+            case .calendar:
+                CalendarView()
+            case .slack:
+                SlackAgentView()
             }
         }
     }

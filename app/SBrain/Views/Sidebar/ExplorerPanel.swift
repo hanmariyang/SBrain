@@ -18,6 +18,10 @@ struct ExplorerPanel: View {
 
             if isSearchMode || noteStore.isSearchActive {
                 ExplorerSearchView(isSearchMode: $isSearchMode)
+            } else if viewMode == .calendar {
+                CalendarExplorerView()
+            } else if viewMode == .slack {
+                SlackExplorerView()
             } else if viewMode == .database {
                 DatabaseExplorerView()
             } else {
@@ -62,6 +66,8 @@ struct ExplorerPanel: View {
         switch viewMode {
         case .list, .brain: return "folder"
         case .database: return "cylinder.split.1x2"
+        case .calendar: return "calendar"
+        case .slack: return "number.square"
         }
     }
 
@@ -70,6 +76,8 @@ struct ExplorerPanel: View {
         switch viewMode {
         case .list, .brain: return "탐색기"
         case .database: return "데이터베이스"
+        case .calendar: return "캘린더"
+        case .slack: return "슬랙"
         }
     }
 }

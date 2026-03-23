@@ -10,6 +10,7 @@ struct SidebarIconBar: View {
     @Binding var isFullTerminal: Bool
     @Binding var showExplorerPanel: Bool
     @Binding var isSearchMode: Bool
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -99,6 +100,18 @@ struct SidebarIconBar: View {
                 }
                 .help("데이터베이스")
 
+                IconBarButton(icon: "calendar", isActive: viewMode == .calendar && !isFullTerminal) {
+                    isFullTerminal = false
+                    viewMode = .calendar
+                }
+                .help("캘린더")
+
+                IconBarButton(icon: "number.square", isActive: viewMode == .slack && !isFullTerminal) {
+                    isFullTerminal = false
+                    viewMode = .slack
+                }
+                .help("슬랙")
+
                 IconBarButton(icon: "terminal", isActive: showBottomTerminal || isFullTerminal) {
                     if isFullTerminal {
                         isFullTerminal = false
@@ -122,10 +135,13 @@ struct SidebarIconBar: View {
                 }
                 .help(showExplorerPanel ? "탐색 패널 닫기" : "탐색 패널 열기")
 
-                IconBarButton(icon: "gearshape", isActive: false) {
-                    // TODO: settings
+                IconBarButton(icon: "gearshape", isActive: showSettings) {
+                    showSettings = true
                 }
                 .help("설정")
+                .sheet(isPresented: $showSettings) {
+                    SettingsView(isPresented: $showSettings)
+                }
             }
             .padding(.bottom, SB.Space.md)
         }

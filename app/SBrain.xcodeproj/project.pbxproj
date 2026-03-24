@@ -431,7 +431,7 @@
 		5E33B7B0306C0D5FAD030EF3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 7;
 				INFOPLIST_FILE = SBrain/iOS/Info.plist;
@@ -610,7 +610,7 @@
 		E2EEED6AFE00367915FCF59E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 7;
 				INFOPLIST_FILE = SBrain/iOS/Info.plist;

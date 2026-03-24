@@ -11,6 +11,7 @@ struct SBrainApp: App {
     @StateObject private var slackStore = SlackStore()
     @StateObject private var calendarStore = CalendarStore()
     @StateObject private var fileMonitor = FileMonitor()
+    @StateObject private var syncManager = SyncManager()
 
     private let updaterController: SPUStandardUpdaterController
 
@@ -29,7 +30,9 @@ struct SBrainApp: App {
                 .environmentObject(slackStore)
                 .environmentObject(calendarStore)
                 .environmentObject(fileMonitor)
+                .environmentObject(syncManager)
                 .onAppear {
+                    noteStore.syncManager = syncManager
                     backendManager.start()
                     // 앱 시작 2초 후 업데이트 자동 확인
                     checkForUpdatesOnLaunch()

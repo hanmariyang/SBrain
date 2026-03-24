@@ -2,9 +2,37 @@ import Foundation
 
 class APIClient {
     static let shared = APIClient()
-    private let baseURL = "https://sbrain-production-0f09.up.railway.app/api"
+
+    /// 로컬 Django (macOS 전용)
+    private var baseURL: String {
+        "http://localhost:8765/api"
+    }
+
+    /// Railway 클라우드 (동기화 + iOS)
+    let cloudBaseURL = "https://sbrain-production-0f09.up.railway.app/api"
+
+    /// JWT 토큰 (클라우드 인증용, UserDefaults 영속화)
+    var jwtAccessToken: String {
+        get { UserDefaults.standard.string(forKey: "sbrain.cloud.jwtAccess") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "sbrain.cloud.jwtAccess") }
+    }
+    var jwtRefreshToken: String {
+        get { UserDefaults.standard.string(forKey: "sbrain.cloud.jwtRefresh") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "sbrain.cloud.jwtRefresh") }
+    }
 
     private init() {}
+
+    /// JWT 인증 헤더가 포함된 클라우드 URLRequest 생성
+    private func cloudRequest(path: String, method: String = "POST") -> URLRequest {
+        var request = URLRequest(url: URL(string: "\(cloudBaseURL)\(path)")!)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !jwtAccessToken.isEmpty {
+            request.setValue("Bearer \(jwtAccessToken)", forHTTPHeaderField: "Authorization")
+        }
+        return request
+    }
 
     // MARK: - Memories (Notes)
 
@@ -303,6 +331,56 @@ class APIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         let _ = try await URLSession.shared.data(for: request)
+    }
+
+    // MARK: - Cloud Sync
+
+    /// JWT 로그인 (Railway 클라우드)
+    func cloudLogin(username: String, password: String) async throws {
+        var request = cloudRequest(path: "/auth/token/")
+        let body: [String: String] = ["username": username, "password": password]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        jwtAccessToken = json["access"] as? String ?? ""
+        jwtRefreshToken = json["refresh"] as? String ?? ""
+    }
+
+    /// JWT 토큰 갱신
+    func cloudRefreshToken() async throws {
+        var request = cloudRequest(path: "/auth/token/refresh/")
+        let body = ["refresh": jwtRefreshToken]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            jwtAccessToken = ""
+            jwtRefreshToken = ""
+            throw URLError(.userAuthenticationRequired)
+        }
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        jwtAccessToken = json["access"] as? String ?? ""
+    }
+
+    /// macOS → Railway 노트 동기화
+    func syncPush(notes: [[String: String]], deletedIds: [String]) async throws {
+        // 토큰 없으면 동기화 스킵
+        guard !jwtAccessToken.isEmpty else { return }
+
+        var request = cloudRequest(path: "/sync/push/")
+        let body: [String: Any] = ["notes": notes, "deleted_ids": deletedIds]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            // 토큰 만료 → 갱신 후 재시도
+            try await cloudRefreshToken()
+            var retryRequest = cloudRequest(path: "/sync/push/")
+            retryRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let _ = try await URLSession.shared.data(for: retryRequest)
+        }
     }
 
 }

@@ -15,6 +15,7 @@
 		335904CF61CFCBDA3D9E190D /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDCBF0852325EC45EE02ADC /* CalendarView.swift */; };
 		34B7F571A5468DECB4F17070 /* SBButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7BD3D89EA799D8E97B3F17E /* SBButton.swift */; };
 		3D74BA6DD3D10DD373AB01C2 /* CalendarExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E762F749940D4DFEAA4632 /* CalendarExplorerView.swift */; };
+		3DD5FD7BE6B22C409AD5F663 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A1CE86BC359AB545318E63 /* SyncManager.swift */; };
 		3E26E8E01FA80FC9E0286622 /* SBCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B008FF4BB5CA0E747C2F246 /* SBCard.swift */; };
 		404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F625EF94764920370B930 /* DatabaseStore.swift */; };
 		489A214E713C206E5EC747EF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E77E57428659F1D47314B230 /* Assets.xcassets */; };
@@ -52,6 +53,7 @@
 		1063843C8FF0AAD02172AB79 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		30E762F749940D4DFEAA4632 /* CalendarExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarExplorerView.swift; sourceTree = "<group>"; };
 		3F737901CA8A7C63C9E7127A /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
+		41A1CE86BC359AB545318E63 /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
 		43719472F5EB78307E0A0F9C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
 		4FB31782F75AB3095D6EDFBA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		502F625EF94764920370B930 /* DatabaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseStore.swift; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 				09F625507856F470275E96B7 /* LocalGraphBuilder.swift */,
 				D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */,
 				0CDA82671719F944056E84CE /* SlackStore.swift */,
+				41A1CE86BC359AB545318E63 /* SyncManager.swift */,
 				F809E41E7C72810A86C8E839 /* TerminalManager.swift */,
 			);
 			path = Services;
@@ -310,6 +313,7 @@
 				0D96956D05AA105AF58B4A32 /* SlackExplorerView.swift in Sources */,
 				605606D1C5DF6CCADB64A053 /* SlackModels.swift in Sources */,
 				80C783A564C93AACB0965EAC /* SlackStore.swift in Sources */,
+				3DD5FD7BE6B22C409AD5F663 /* SyncManager.swift in Sources */,
 				1CB733DDA08043559653192D /* TerminalManager.swift in Sources */,
 				BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */,
 			);

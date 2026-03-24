@@ -26,6 +26,8 @@ class NoteStore: ObservableObject {
     @Published var isIngesting = false
 
     private let api = APIClient.shared
+    /// SyncManager 참조 (SBrainApp에서 주입)
+    weak var syncManager: SyncManager?
     private var pollTimer: Timer?
     private let savedProjectsKey = "SBrain.projectPaths"
     private let savedProjectNamesKey = "SBrain.projectNames"
@@ -365,17 +367,28 @@ class NoteStore: ObservableObject {
         let existing = mdPaths.filter { FileManager.default.fileExists(atPath: $0) }
         let deleted = mdPaths.filter { !FileManager.default.fileExists(atPath: $0) }
 
-        // 3. 부분 재인덱싱 요청
+        // 3. 부분 재인덱싱 요청 (로컬)
         if !existing.isEmpty || !deleted.isEmpty {
             Task {
                 try? await api.partialIngest(paths: existing, deletedPaths: deleted)
             }
         }
 
-        // 4. 그래프 리빌드
+        // 4. Railway 클라우드 동기화 (신규)
+        if !existing.isEmpty || !deleted.isEmpty {
+            Task {
+                await syncManager?.pushChanges(
+                    changedPaths: existing,
+                    deletedPaths: deleted,
+                    projects: projects
+                )
+            }
+        }
+
+        // 5. 그래프 리빌드
         rebuildGraph()
 
-        // 5. 선택된 파일이 변경됐으면 내용 새로고침
+        // 6. 선택된 파일이 변경됐으면 내용 새로고침
         if let selected = selectedFilePath, changedPaths.contains(selected) {
             selectedFileContent = FolderScanner.readContent(at: selected)
         }

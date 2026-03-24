@@ -73,10 +73,15 @@ def release_download(request, tag, filename):
         return HttpResponse(f"Download failed: {e}", status=502)
 
 
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 urlpatterns = [
     # Sparkle appcast + DMG 다운로드 프록시 (private repo 대응)
     path("appcast.xml", appcast_xml, name="appcast"),
     path("releases/download/<str:tag>/<str:filename>", release_download, name="release-download"),
+    # JWT 인증 (Railway에서만 사용, 로컬은 AllowAny)
+    path("api/auth/token/", TokenObtainPairView.as_view(), name="token-obtain"),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     # OAuth 콜백 — DRF 완전 우회, 순수 Django 뷰
     path("api/calendar/auth/callback/", google_calendar_callback, name="calendar-auth-callback"),
     path("api/slack/auth/callback/", slack_oauth_callback, name="slack-auth-callback"),

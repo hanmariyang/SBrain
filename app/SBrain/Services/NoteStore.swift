@@ -150,6 +150,7 @@ class NoteStore: ObservableObject {
     // MARK: - Project Management
 
     func addFolder() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -160,6 +161,7 @@ class NoteStore: ObservableObject {
         for url in panel.urls {
             addProject(path: url.path)
         }
+        #endif
     }
 
     func addProject(path: String) {
@@ -333,7 +335,9 @@ class NoteStore: ObservableObject {
     }
 
     func openInExternalEditor(path: String) {
+        #if os(macOS)
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        #endif
     }
 
     // Legacy compat: selectFolder maps to addFolder

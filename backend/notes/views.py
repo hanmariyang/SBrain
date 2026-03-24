@@ -1,8 +1,7 @@
 import threading
 
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from .ingest import get_status, ingest_folder, partial_ingest_files, _split_chunks
@@ -80,7 +79,6 @@ def search(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def sync_push(request):
     """macOS → Railway 동기화. 변경된 노트를 클라우드 DB에 반영."""
     notes_data = request.data.get("notes", [])

@@ -73,7 +73,28 @@ def release_download(request, tag, filename):
         return HttpResponse(f"Download failed: {e}", status=502)
 
 
+from django.contrib.auth.models import User
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response as DRFResponse
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register(request_obj):
+    """회원가입 API (초기 설정용)."""
+    username = request_obj.data.get("username", "")
+    password = request_obj.data.get("password", "")
+    if not username or not password:
+        return DRFResponse({"error": "username and password required"}, status=400)
+    if User.objects.filter(username=username).exists():
+        return DRFResponse({"error": "User already exists"}, status=409)
+    User.objects.create_user(username=username, password=password)
+    return DRFResponse({"detail": f"User '{username}' created"}, status=201)
+
 
 urlpatterns = [
     # Sparkle appcast + DMG 다운로드 프록시 (private repo 대응)
@@ -82,6 +103,7 @@ urlpatterns = [
     # JWT 인증 (Railway에서만 사용, 로컬은 AllowAny)
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token-obtain"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("api/auth/register/", register, name="register"),
     # OAuth 콜백 — DRF 완전 우회, 순수 Django 뷰
     path("api/calendar/auth/callback/", google_calendar_callback, name="calendar-auth-callback"),
     path("api/slack/auth/callback/", slack_oauth_callback, name="slack-auth-callback"),

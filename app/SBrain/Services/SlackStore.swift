@@ -1,5 +1,10 @@
 import Foundation
 import SwiftUI
+#if os(macOS)
+import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
 
 // MARK: - Slack Store
 
@@ -57,7 +62,11 @@ class SlackStore: ObservableObject {
         do {
             let authUrl = try await api.slackAuth()
             if let url = URL(string: authUrl) {
+                #if os(macOS)
                 NSWorkspace.shared.open(url)
+                #elseif os(iOS)
+                await UIApplication.shared.open(url)
+                #endif
             }
             for _ in 0..<15 {
                 try await Task.sleep(nanoseconds: 2_000_000_000)

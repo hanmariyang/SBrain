@@ -1,5 +1,7 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
 
 // MARK: - SBrain Design System
 
@@ -133,6 +135,7 @@ extension Color {
 
 // MARK: - NSColor Helpers (for AppKit views like SwiftTerm)
 
+#if os(macOS)
 enum SBNSColor {
     static let bgPrimary = NSColor(red: CGFloat(250)/255, green: CGFloat(248)/255, blue: CGFloat(245)/255, alpha: 1)
     static let bgSecondary = NSColor(red: CGFloat(242)/255, green: CGFloat(237)/255, blue: CGFloat(232)/255, alpha: 1)
@@ -141,3 +144,4 @@ enum SBNSColor {
     static let gold600 = NSColor(red: CGFloat(196)/255, green: CGFloat(151)/255, blue: CGFloat(59)/255, alpha: 1)
     static let gold400 = NSColor(red: CGFloat(212)/255, green: CGFloat(173)/255, blue: CGFloat(90)/255, alpha: 1)
 }
+#endif

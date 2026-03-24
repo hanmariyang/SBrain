@@ -3,7 +3,9 @@ import SwiftUI
 // MARK: - Settings View
 
 struct SettingsView: View {
+    #if os(macOS)
     @EnvironmentObject var backendManager: BackendManager
+    #endif
     @EnvironmentObject var slackStore: SlackStore
     @EnvironmentObject var calendarStore: CalendarStore
     @Binding var isPresented: Bool
@@ -34,11 +36,13 @@ struct SettingsView: View {
             ScrollView {
                 VStack(spacing: SB.Space.lg) {
                     // Backend status
+                    #if os(macOS)
                     settingsSection(title: "백엔드", icon: "server.rack") {
                         settingsRow(label: "상태", value: backendManager.isRunning ? "실행 중" : "중지됨",
                                     statusColor: backendManager.isRunning ? SB.Colors.accentGreen : SB.Colors.accentRed)
                         settingsRow(label: "포트", value: "8765")
                     }
+                    #endif
 
                     // Slack connection
                     settingsSection(title: "Slack 연동", icon: "number.square") {

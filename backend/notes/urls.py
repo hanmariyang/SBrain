@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path("ingest/", views.ingest, name="ingest"),
     path("ingest/partial/", views.partial_ingest, name="partial-ingest"),
+    path("sync/push/", views.sync_push, name="sync-push"),
     path("notes/", views.note_list, name="note-list"),
     path("notes/<str:note_id>/", views.note_detail, name="note-detail"),
     path("search/", views.search, name="search"),

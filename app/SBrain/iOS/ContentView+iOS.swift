@@ -73,88 +73,75 @@ struct IOSContentView: View {
             .tag(IOSTab.settings)
         }
         .tint(SB.Colors.gold600)
-        .onAppear {
-            // Fetch initial data from Railway API
-            Task {
-                async let calAuth: () = calendarStore.checkAuth()
-                async let slkAuth: () = slackStore.checkStatus()
-                _ = await (calAuth, slkAuth)
-                await syncManager.fullSync(projects: noteStore.projects)
-            }
+        .task {
+            // iOS: Railway API에서 노트 로드
+            await noteStore.loadCloudNotes()
         }
     }
 }
 
-// MARK: - Notes Tab (List + Detail)
+// MARK: - Notes Tab (Cloud Notes from Railway API)
 
 struct IOSNotesView: View {
     @EnvironmentObject var noteStore: NoteStore
 
     var body: some View {
-        List {
-            if noteStore.hasProjects {
-                ForEach(noteStore.visibleProjects) { project in
-                    if let root = project.rootFolder {
-                        Section(header: IOSProjectHeader(project: project)) {
-                            ForEach(flatFiles(root), id: \.path) { node in
-                                NavigationLink(value: node.path) {
-                                    IOSFileRow(node: node)
-                                }
-                            }
-                        }
+        Group {
+            if noteStore.isLoadingCloud {
+                ProgressView("Loading notes...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if noteStore.cloudNotes.isEmpty {
+                ContentUnavailableView(
+                    "No Notes",
+                    systemImage: "brain",
+                    description: Text("Sync notes from macOS app first.\nSettings > Cloud Sync > Connect")
+                )
+            } else {
+                List(noteStore.cloudNotes) { note in
+                    NavigationLink(value: note.id) {
+                        IOSNoteRow(note: note)
                     }
                 }
-            } else {
-                ContentUnavailableView(
-                    "No Projects",
-                    systemImage: "brain",
-                    description: Text("Add projects from macOS app.\nNotes will sync via Railway Cloud.")
-                )
+                .listStyle(.plain)
+                .refreshable {
+                    await noteStore.loadCloudNotes()
+                }
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationDestination(for: String.self) { path in
-            IOSNoteDetailView(path: path)
+        .navigationDestination(for: String.self) { noteId in
+            IOSCloudNoteDetailView(noteId: noteId)
         }
-    }
-
-    /// Flatten folder tree into a list of file nodes
-    private func flatFiles(_ node: FolderNode) -> [FolderNode] {
-        var result: [FolderNode] = []
-        if !node.isFolder {
-            result.append(node)
-        }
-        for child in node.children {
-            result.append(contentsOf: flatFiles(child))
-        }
-        return result
     }
 }
 
-struct IOSProjectHeader: View {
-    let project: ProjectFolder
+/// Railway API에서 가져온 노트 상세 뷰
+struct IOSCloudNoteDetailView: View {
+    let noteId: String
+    @EnvironmentObject var noteStore: NoteStore
+    @State private var content: String?
+    @State private var isLoading = true
 
     var body: some View {
-        HStack(spacing: SB.Space.sm) {
-            Image(systemName: "folder.fill")
-                .font(.system(size: 11))
-                .foregroundStyle(SB.Colors.gold600)
-
-            Text(project.name)
-                .font(SB.Font.titleSm())
-                .foregroundStyle(SB.Colors.navy900)
-
-            if let root = project.rootFolder {
-                Text("\(root.docFileCount) files")
-                    .font(SB.Font.monoSm())
-                    .foregroundStyle(SB.Colors.navy300)
+        Group {
+            if isLoading {
+                ProgressView()
+            } else if let content = content {
+                IOSMarkdownWebView(markdown: content)
+            } else {
+                ContentUnavailableView("Failed to load", systemImage: "exclamationmark.triangle")
             }
+        }
+        .navigationTitle(noteStore.cloudNotes.first(where: { $0.id == noteId })?.filename ?? "Note")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            content = await noteStore.loadCloudNoteContent(id: noteId)
+            isLoading = false
         }
     }
 }
 
-struct IOSFileRow: View {
-    let node: FolderNode
+struct IOSNoteRow: View {
+    let note: Memory
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -163,22 +150,20 @@ struct IOSFileRow: View {
                     .font(.system(size: 12))
                     .foregroundStyle(SB.Colors.accentBlue)
 
-                Text((node.name as NSString).deletingPathExtension)
+                Text((note.filename as NSString).deletingPathExtension)
                     .font(SB.Font.bodyMd())
                     .foregroundStyle(SB.Colors.navy900)
                     .lineLimit(1)
 
                 Spacer()
 
-                if let date = node.modifiedAt {
-                    Text(formatDate(date))
-                        .font(SB.Font.monoSm())
-                        .foregroundStyle(SB.Colors.navy300)
-                }
+                Text(note.path.components(separatedBy: "/").first ?? "")
+                    .font(SB.Font.monoSm())
+                    .foregroundStyle(SB.Colors.navy300)
             }
 
-            if !node.preview.isEmpty {
-                Text(node.preview)
+            if let preview = note.preview, !preview.isEmpty {
+                Text(preview)
                     .font(SB.Font.bodySm())
                     .foregroundStyle(SB.Colors.navy500)
                     .lineLimit(2)
@@ -188,18 +173,12 @@ struct IOSFileRow: View {
     }
 
     private var fileIcon: String {
-        let ext = (node.name as NSString).pathExtension.lowercased()
+        let ext = (note.filename as NSString).pathExtension.lowercased()
         switch ext {
         case "html", "htm": return "globe"
         case "md", "markdown": return "doc.text"
         default: return "doc"
         }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MM/dd"
-        return fmt.string(from: date)
     }
 }
 
@@ -221,7 +200,7 @@ struct IOSSearchView: View {
                     .foregroundStyle(SB.Colors.navy900)
                     .submitLabel(.search)
                     .onSubmit {
-                        Task { await noteStore.recall() }
+                        Task { await noteStore.recallFromCloud() }
                     }
 
                 if noteStore.isSearching {
@@ -265,13 +244,13 @@ struct IOSSearchView: View {
                 )
             } else {
                 List(noteStore.filteredSearchResults) { result in
-                    NavigationLink(value: result.path) {
+                    NavigationLink(value: result.noteId) {
                         IOSSearchResultRow(result: result)
                     }
                 }
                 .listStyle(.plain)
-                .navigationDestination(for: String.self) { path in
-                    IOSNoteDetailView(path: path)
+                .navigationDestination(for: String.self) { noteId in
+                    IOSCloudNoteDetailView(noteId: noteId)
                 }
             }
         }

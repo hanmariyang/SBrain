@@ -17,6 +17,10 @@ class NoteStore: ObservableObject {
     @Published var brainGraph: BrainGraph?
     @Published var dbBrainGraph: BrainGraph?  // injected from DatabaseStore
 
+    // Cloud notes (iOS용 — Railway API에서 로드)
+    @Published var cloudNotes: [Memory] = []
+    @Published var isLoadingCloud = false
+
     // Backend (search only)
     @Published var searchResults: [SearchResult] = []
     @Published var searchQuery = ""
@@ -145,6 +149,72 @@ class NoteStore: ObservableObject {
         searchQuery = ""
         searchResults = []
         searchError = nil
+    }
+
+    // MARK: - Cloud Notes (iOS)
+
+    /// Railway API에서 노트 목록 로드 (iOS용)
+    func loadCloudNotes() async {
+        guard !api.jwtAccessToken.isEmpty else { return }
+        isLoadingCloud = true
+        do {
+            let url = URL(string: "\(api.cloudBaseURL)/notes/")!
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await URLSession.shared.data(for: request)
+            cloudNotes = try JSONDecoder().decode([Memory].self, from: data)
+        } catch {
+            // 토큰 만료 시 갱신 후 재시도
+            do {
+                try await api.cloudRefreshToken()
+                let url = URL(string: "\(api.cloudBaseURL)/notes/")!
+                var request = URLRequest(url: url)
+                request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+                let (data, _) = try await URLSession.shared.data(for: request)
+                cloudNotes = try JSONDecoder().decode([Memory].self, from: data)
+            } catch {
+                cloudNotes = []
+            }
+        }
+        isLoadingCloud = false
+    }
+
+    /// Railway API에서 노트 상세 로드 (iOS용)
+    func loadCloudNoteContent(id: String) async -> String? {
+        guard !api.jwtAccessToken.isEmpty else { return nil }
+        do {
+            let url = URL(string: "\(api.cloudBaseURL)/notes/\(id)/")!
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let memory = try JSONDecoder().decode(Memory.self, from: data)
+            return memory.content
+        } catch {
+            return nil
+        }
+    }
+
+    /// Railway API 검색 (iOS용 — 클라우드 기반)
+    func recallFromCloud() async {
+        guard !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty else {
+            searchResults = []
+            return
+        }
+        isSearching = true
+        do {
+            let url = URL(string: "\(api.cloudBaseURL)/search/")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+            let body: [String: Any] = ["query": searchQuery, "limit": 20]
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, _) = try await URLSession.shared.data(for: request)
+            searchResults = try JSONDecoder().decode([SearchResult].self, from: data)
+        } catch {
+            searchResults = []
+        }
+        isSearching = false
     }
 
     // MARK: - Project Management

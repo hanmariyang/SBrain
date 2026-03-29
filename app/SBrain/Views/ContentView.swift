@@ -38,6 +38,7 @@ struct ContentView: View {
     @EnvironmentObject var slackStore: SlackStore
     @EnvironmentObject var calendarStore: CalendarStore
     @EnvironmentObject var fileMonitor: FileMonitor
+    @EnvironmentObject var syncManager: SyncManager
 
     @State private var viewMode: ViewMode = .list
     @State private var showExplorerPanel = true
@@ -123,10 +124,27 @@ struct ContentView: View {
                 for project in noteStore.projects {
                     fileMonitor.startWatching(path: project.path)
                 }
+
+                // Phase 4: 클라우드 초기 동기화
+                await syncManager.fullSync(projects: noteStore.projects)
             }
         }
         .onChange(of: dbStore.dbBrainGraph?.neurons.count) { _, _ in
             noteStore.dbBrainGraph = dbStore.dbBrainGraph
+        }
+        .onChange(of: viewMode) { _, newMode in
+            switch newMode {
+            case .brain:
+                Analytics.viewBrainMap(neuronCount: noteStore.mergedBrainGraph?.neurons.count ?? 0)
+            case .list:
+                Analytics.viewList()
+            case .calendar:
+                Analytics.viewCalendar()
+            case .slack:
+                Analytics.viewSlack()
+            case .database:
+                break
+            }
         }
     }
 

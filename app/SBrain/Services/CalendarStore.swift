@@ -1,6 +1,10 @@
 import Foundation
 import SwiftUI
+#if os(macOS)
 import AppKit
+#elseif os(iOS)
+import UIKit
+#endif
 
 // MARK: - Calendar Store
 
@@ -52,7 +56,11 @@ class CalendarStore: ObservableObject {
         do {
             let authUrl = try await api.calendarAuth()
             if let url = URL(string: authUrl) {
+                #if os(macOS)
                 NSWorkspace.shared.open(url)
+                #elseif os(iOS)
+                await UIApplication.shared.open(url)
+                #endif
             }
             // OAuth 완료 대기: 2초 간격으로 30초간 폴링
             for _ in 0..<15 {

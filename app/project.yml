@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.hanmari.sbrain
   deploymentTarget:
     macOS: "14.0"
+    iOS: "17.0"
   xcodeVersion: "16.0"
 
 packages:
@@ -12,22 +13,29 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: "2.6.0"
+  TelemetryDeck:
+    url: https://github.com/TelemetryDeck/SwiftSDK
+    from: "2.0.0"
 
 targets:
   SBrain:
     type: application
     platform: macOS
     sources:
-      - SBrain
+      - path: SBrain
+        excludes:
+          - "iOS/**"
     dependencies:
       - package: SwiftTerm
       - package: Sparkle
         product: Sparkle
+      - package: TelemetryDeck
+        product: TelemetryDeck
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hanmari.sbrain
-        MARKETING_VERSION: "0.8.0"
-        CURRENT_PROJECT_VERSION: 7
+        MARKETING_VERSION: "0.9.0"
+        CURRENT_PROJECT_VERSION: 8
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_ENTITLEMENTS: SBrain/SBrain.entitlements
@@ -49,3 +57,55 @@ targets:
       properties:
         com.apple.security.app-sandbox: false
         com.apple.security.network.client: true
+
+  SBrain-iOS:
+    type: application
+    platform: iOS
+    dependencies:
+      - package: TelemetryDeck
+        product: TelemetryDeck
+    sources:
+      - path: SBrain
+        excludes:
+          - "iOS/**"
+          - "Info.plist"
+          - "SBrain.entitlements"
+          - "SBrainApp.swift"
+          - "Services/BackendManager.swift"
+          - "Services/FileMonitor.swift"
+          - "Services/TerminalManager.swift"
+          - "Services/HandTrackingManager.swift"
+          - "Views/ContentView.swift"
+          - "Views/BrainMapView.swift"
+          - "Views/NoteDetailView.swift"
+          - "Views/TerminalView.swift"
+          - "Views/HandCursorOverlay.swift"
+          - "Views/Sidebar/**"
+      - path: SBrain/iOS
+        excludes:
+          - "Info.plist"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hanmari.sbrain.ios
+        MARKETING_VERSION: "0.9.0"
+        CURRENT_PROJECT_VERSION: 8
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: SBrain/iOS/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight

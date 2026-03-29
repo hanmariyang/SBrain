@@ -17,6 +17,10 @@ class NoteStore: ObservableObject {
     @Published var brainGraph: BrainGraph?
     @Published var dbBrainGraph: BrainGraph?  // injected from DatabaseStore
 
+    // Cloud notes (iOS용 — Railway API에서 로드)
+    @Published var cloudNotes: [Memory] = []
+    @Published var isLoadingCloud = false
+
     // Backend (search only)
     @Published var searchResults: [SearchResult] = []
     @Published var searchQuery = ""
@@ -26,6 +30,8 @@ class NoteStore: ObservableObject {
     @Published var isIngesting = false
 
     private let api = APIClient.shared
+    /// SyncManager 참조 (SBrainApp에서 주입)
+    weak var syncManager: SyncManager?
     private var pollTimer: Timer?
     private let savedProjectsKey = "SBrain.projectPaths"
     private let savedProjectNamesKey = "SBrain.projectNames"
@@ -145,9 +151,77 @@ class NoteStore: ObservableObject {
         searchError = nil
     }
 
+    // MARK: - Cloud Notes (iOS)
+
+    /// Railway API에서 노트 목록 로드 (iOS용)
+    func loadCloudNotes() async {
+        guard !api.jwtAccessToken.isEmpty else { return }
+        isLoadingCloud = true
+        do {
+            let url = URL(string: "\(api.cloudBaseURL)/notes/")!
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await URLSession.shared.data(for: request)
+            cloudNotes = try JSONDecoder().decode([Memory].self, from: data)
+        } catch {
+            // 토큰 만료 시 갱신 후 재시도
+            do {
+                try await api.cloudRefreshToken()
+                let url = URL(string: "\(api.cloudBaseURL)/notes/")!
+                var request = URLRequest(url: url)
+                request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+                let (data, _) = try await URLSession.shared.data(for: request)
+                cloudNotes = try JSONDecoder().decode([Memory].self, from: data)
+            } catch {
+                cloudNotes = []
+            }
+        }
+        isLoadingCloud = false
+    }
+
+    /// Railway API에서 노트 상세 로드 (iOS용)
+    func loadCloudNoteContent(id: String) async -> String? {
+        guard !api.jwtAccessToken.isEmpty else { return nil }
+        do {
+            let url = URL(string: "\(api.cloudBaseURL)/notes/\(id)/")!
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let memory = try JSONDecoder().decode(Memory.self, from: data)
+            return memory.content
+        } catch {
+            return nil
+        }
+    }
+
+    /// Railway API 검색 (iOS용 — 클라우드 기반)
+    func recallFromCloud() async {
+        guard !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty else {
+            searchResults = []
+            return
+        }
+        isSearching = true
+        do {
+            let url = URL(string: "\(api.cloudBaseURL)/search/")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
+            let body: [String: Any] = ["query": searchQuery, "limit": 20]
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let (data, _) = try await URLSession.shared.data(for: request)
+            searchResults = try JSONDecoder().decode([SearchResult].self, from: data)
+            Analytics.searchRecall(resultCount: searchResults.count)
+        } catch {
+            searchResults = []
+        }
+        isSearching = false
+    }
+
     // MARK: - Project Management
 
     func addFolder() {
+        #if os(macOS)
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -158,6 +232,7 @@ class NoteStore: ObservableObject {
         for url in panel.urls {
             addProject(path: url.path)
         }
+        #endif
     }
 
     func addProject(path: String) {
@@ -331,7 +406,9 @@ class NoteStore: ObservableObject {
     }
 
     func openInExternalEditor(path: String) {
+        #if os(macOS)
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
+        #endif
     }
 
     // Legacy compat: selectFolder maps to addFolder
@@ -365,17 +442,28 @@ class NoteStore: ObservableObject {
         let existing = mdPaths.filter { FileManager.default.fileExists(atPath: $0) }
         let deleted = mdPaths.filter { !FileManager.default.fileExists(atPath: $0) }
 
-        // 3. 부분 재인덱싱 요청
+        // 3. 부분 재인덱싱 요청 (로컬)
         if !existing.isEmpty || !deleted.isEmpty {
             Task {
                 try? await api.partialIngest(paths: existing, deletedPaths: deleted)
             }
         }
 
-        // 4. 그래프 리빌드
+        // 4. Railway 클라우드 동기화 (신규)
+        if !existing.isEmpty || !deleted.isEmpty {
+            Task {
+                await syncManager?.pushChanges(
+                    changedPaths: existing,
+                    deletedPaths: deleted,
+                    projects: projects
+                )
+            }
+        }
+
+        // 5. 그래프 리빌드
         rebuildGraph()
 
-        // 5. 선택된 파일이 변경됐으면 내용 새로고침
+        // 6. 선택된 파일이 변경됐으면 내용 새로고침
         if let selected = selectedFilePath, changedPaths.contains(selected) {
             selectedFileContent = FolderScanner.readContent(at: selected)
         }
@@ -454,6 +542,7 @@ class NoteStore: ObservableObject {
         searchError = nil
         do {
             searchResults = try await api.recall(query: searchQuery)
+            Analytics.searchRecall(resultCount: searchResults.count)
             if searchResults.isEmpty {
                 searchError = "검색 결과가 없습니다 — 프로젝트를 먼저 인덱싱하세요"
             }

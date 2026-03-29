@@ -8,41 +8,72 @@
 
 /* Begin PBXBuildFile section */
 		006FA931347C2A0123266694 /* ExplorerPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94306A430889FF596ABE4F0 /* ExplorerPanel.swift */; };
+		04006EEECC218EA28B7B7688 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE10BC28BD73F99874A555AC /* Note.swift */; };
 		0C1BB40C09A03F90B8BE575B /* HandCursorOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF7A5190CBD9E8F4C1DF06DA /* HandCursorOverlay.swift */; };
 		0D96956D05AA105AF58B4A32 /* SlackExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69EC67D5419EA18C5CDFD984 /* SlackExplorerView.swift */; };
 		1A834DA447A414DA0D955400 /* HandTrackingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */; };
 		1CB733DDA08043559653192D /* TerminalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F809E41E7C72810A86C8E839 /* TerminalManager.swift */; };
+		210B6816C9E60C7048AD23EE /* SlackStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA82671719F944056E84CE /* SlackStore.swift */; };
+		2D09CE5A6DE82120D7009DD7 /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDCBF0852325EC45EE02ADC /* CalendarView.swift */; };
+		31919EFA77DB49D5BE093FC6 /* SBCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B008FF4BB5CA0E747C2F246 /* SBCard.swift */; };
 		335904CF61CFCBDA3D9E190D /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDCBF0852325EC45EE02ADC /* CalendarView.swift */; };
+		33DECF3D19127E595E09B512 /* SlackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9482AEC43C623300660A97C8 /* SlackModels.swift */; };
 		34B7F571A5468DECB4F17070 /* SBButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7BD3D89EA799D8E97B3F17E /* SBButton.swift */; };
 		3D74BA6DD3D10DD373AB01C2 /* CalendarExplorerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E762F749940D4DFEAA4632 /* CalendarExplorerView.swift */; };
+		3DD5FD7BE6B22C409AD5F663 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A1CE86BC359AB545318E63 /* SyncManager.swift */; };
 		3E26E8E01FA80FC9E0286622 /* SBCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B008FF4BB5CA0E747C2F246 /* SBCard.swift */; };
 		404E0FC3D02E72C1F9A5CD6F /* DatabaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F625EF94764920370B930 /* DatabaseStore.swift */; };
+		4342F2C39E04E3C91035BBF1 /* ContentView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41DB85311E2DD6BFB78858A0 /* ContentView+iOS.swift */; };
 		489A214E713C206E5EC747EF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E77E57428659F1D47314B230 /* Assets.xcassets */; };
 		522E184854B3A41937916B16 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 1F7289016E3F4EC647338E91 /* Sparkle */; };
+		53CF913C88D62F22077029A1 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A1CE86BC359AB545318E63 /* SyncManager.swift */; };
+		553B1297E992D0AC4EF4D5B5 /* CalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C61EE8DD3408FFBC99053B2 /* CalendarModels.swift */; };
 		605606D1C5DF6CCADB64A053 /* SlackModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9482AEC43C623300660A97C8 /* SlackModels.swift */; };
 		64D8376FE675090D55A3A427 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43719472F5EB78307E0A0F9C /* DesignTokens.swift */; };
+		6E8BB7569941A83AE76AB8C9 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1063843C8FF0AAD02172AB79 /* APIClient.swift */; };
 		70F356D824E2B23D93108147 /* SidebarIconBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653236734E0D03FB336685E5 /* SidebarIconBar.swift */; };
+		7598489A1E0B3F0FD8D0DA7E /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F737901CA8A7C63C9E7127A /* SearchBar.swift */; };
 		79B9B35751BB0A23419CADE9 /* CalendarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF1EC1647C63785F60A824F /* CalendarStore.swift */; };
 		7B6A5A92D196C82E4CA1BC36 /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714A8F991F10DB023F90B523 /* FolderScanner.swift */; };
+		7DFE72565D5AE6A135E359F4 /* NoteDetailView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF811669ACFE8937AD05B75 /* NoteDetailView+iOS.swift */; };
 		80C783A564C93AACB0965EAC /* SlackStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA82671719F944056E84CE /* SlackStore.swift */; };
 		82F1FF5E887C7DE2EE0CD0BF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D342196863002E996A7027 /* ContentView.swift */; };
 		858D2381E38B796A44F304D8 /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74140C2CF4145F55F886B78 /* NoteListView.swift */; };
+		87128545CC05A9D1B28F4DF1 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 9646326D038887D30FC2B200 /* TelemetryDeck */; };
+		87E316770F09F617B044418F /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74140C2CF4145F55F886B78 /* NoteListView.swift */; };
 		8BDB6EC126827AC5834CAA22 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE10BC28BD73F99874A555AC /* Note.swift */; };
+		8CFB03462B8F3A571495F75C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E77E57428659F1D47314B230 /* Assets.xcassets */; };
+		949CA2A7A2AB4FBA07714EDA /* DatabaseBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */; };
 		992F529D346BA272AC23C79A /* LocalGraphBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F625507856F470275E96B7 /* LocalGraphBuilder.swift */; };
 		9D907150551731990650F10C /* NoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */; };
+		9F8CC5D5EF19668AABF9C402 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C974AEAF0156F899036E0CA /* Analytics.swift */; };
+		A0BAF80EE604AE9A871954D5 /* SlackAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99ECA63AFA277F0632CE248B /* SlackAgentView.swift */; };
+		A2B6498D2995DA2AEEC1BDAF /* BrainMapView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F18A68C5165AB58EA4C62BE /* BrainMapView+iOS.swift */; };
 		A77C7594B0966FA43A5C197C /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1063843C8FF0AAD02172AB79 /* APIClient.swift */; };
 		A91575DF5C46D8F8ACDF1DFE /* CalendarModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C61EE8DD3408FFBC99053B2 /* CalendarModels.swift */; };
+		A9340CBF9C5170A509A33787 /* LocalGraphBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F625507856F470275E96B7 /* LocalGraphBuilder.swift */; };
+		ABD185A0AF4F5A9F6994F803 /* CalendarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF1EC1647C63785F60A824F /* CalendarStore.swift */; };
 		AD774350C6B035DD11AE0BED /* NoteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7D097F10003525C94A8B00 /* NoteDetailView.swift */; };
 		B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 01B4E7973C454AE1A6921772 /* SwiftTerm */; };
 		BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3022F0EFCCB4F9A7631BAF2 /* TerminalView.swift */; };
 		BD941E6D1B9E6C75E3AA9C26 /* FileMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A94CB66CB9E14785D415BD /* FileMonitor.swift */; };
+		C2A3D6DE9102B2AE66A84D4E /* SBrainApp+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2AA4C52A8A6222D6E01423 /* SBrainApp+iOS.swift */; };
 		C2BE7B1C1E3FD63B16F65FF9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B117FB2D45C49F54240EFFDC /* SettingsView.swift */; };
 		C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */; };
 		D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7544CAB23D252B03FB65F9C /* SBrainApp.swift */; };
 		D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F737901CA8A7C63C9E7127A /* SearchBar.swift */; };
+		DE36C220419D157730AE908A /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C974AEAF0156F899036E0CA /* Analytics.swift */; };
+		E2198CF04F9BA3D94C1F7C72 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B117FB2D45C49F54240EFFDC /* SettingsView.swift */; };
 		E23F9200A4257323F03BE9C0 /* BrainMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE9E28089788162289A190F /* BrainMapView.swift */; };
 		E3784E6ACFF746D679FA858D /* SlackAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99ECA63AFA277F0632CE248B /* SlackAgentView.swift */; };
 		E3CC5871219127F795FBA799 /* DatabaseBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */; };
+		E4BCCAD00208A08A7538EADB /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = C5AB0D238B278A9EEAC171C6 /* TelemetryDeck */; };
+		E8926DC63FDF00A0E4A886A8 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2CD0E1ED5A1684428A368B /* AuthView.swift */; };
+		EE23C67682C2E865D8475FE1 /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714A8F991F10DB023F90B523 /* FolderScanner.swift */; };
+		EFD56C11F095B4AC397FDDB9 /* SBButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7BD3D89EA799D8E97B3F17E /* SBButton.swift */; };
+		F977DF3A7EDB778261FB8B21 /* NoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */; };
+		FA384ADA356BFAED0E9C97A4 /* DatabaseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 502F625EF94764920370B930 /* DatabaseStore.swift */; };
+		FFC36FEA5400642C96C85521 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43719472F5EB78307E0A0F9C /* DesignTokens.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,20 +83,28 @@
 		1063843C8FF0AAD02172AB79 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		30E762F749940D4DFEAA4632 /* CalendarExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarExplorerView.swift; sourceTree = "<group>"; };
 		3F737901CA8A7C63C9E7127A /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
+		41A1CE86BC359AB545318E63 /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
+		41DB85311E2DD6BFB78858A0 /* ContentView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView+iOS.swift"; sourceTree = "<group>"; };
 		43719472F5EB78307E0A0F9C /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignTokens.swift; sourceTree = "<group>"; };
+		4BF811669ACFE8937AD05B75 /* NoteDetailView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NoteDetailView+iOS.swift"; sourceTree = "<group>"; };
 		4FB31782F75AB3095D6EDFBA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		502F625EF94764920370B930 /* DatabaseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseStore.swift; sourceTree = "<group>"; };
+		5F18A68C5165AB58EA4C62BE /* BrainMapView+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BrainMapView+iOS.swift"; sourceTree = "<group>"; };
 		628C484F5E54449DB6714CC0 /* HandTrackingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandTrackingManager.swift; sourceTree = "<group>"; };
 		653236734E0D03FB336685E5 /* SidebarIconBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarIconBar.swift; sourceTree = "<group>"; };
 		69EC67D5419EA18C5CDFD984 /* SlackExplorerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackExplorerView.swift; sourceTree = "<group>"; };
 		6C61EE8DD3408FFBC99053B2 /* CalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarModels.swift; sourceTree = "<group>"; };
 		714A8F991F10DB023F90B523 /* FolderScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderScanner.swift; sourceTree = "<group>"; };
+		7A2AA4C52A8A6222D6E01423 /* SBrainApp+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SBrainApp+iOS.swift"; sourceTree = "<group>"; };
+		7C974AEAF0156F899036E0CA /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
+		809D9DA7A8589988B072DF83 /* SBrain-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "SBrain-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E21D81A3BB7AB638BA4B919 /* SBrain.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBrain.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseBrowserView.swift; sourceTree = "<group>"; };
 		9482AEC43C623300660A97C8 /* SlackModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackModels.swift; sourceTree = "<group>"; };
 		99ECA63AFA277F0632CE248B /* SlackAgentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackAgentView.swift; sourceTree = "<group>"; };
 		A7BD3D89EA799D8E97B3F17E /* SBButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SBButton.swift; sourceTree = "<group>"; };
 		B117FB2D45C49F54240EFFDC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		BD2CD0E1ED5A1684428A368B /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		CCF1EC1647C63785F60A824F /* CalendarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStore.swift; sourceTree = "<group>"; };
 		CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackendManager.swift; sourceTree = "<group>"; };
 		CEE9E28089788162289A190F /* BrainMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainMapView.swift; sourceTree = "<group>"; };
@@ -86,18 +125,40 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		63B9433955FDC000D324BFF5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4BCCAD00208A08A7538EADB /* TelemetryDeck in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D7465CB40CBDD100D0BE6D6B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */,
 				522E184854B3A41937916B16 /* Sparkle in Frameworks */,
+				87128545CC05A9D1B28F4DF1 /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0441F0084FC07A1E12224B44 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				BD2CD0E1ED5A1684428A368B /* AuthView.swift */,
+				5F18A68C5165AB58EA4C62BE /* BrainMapView+iOS.swift */,
+				41DB85311E2DD6BFB78858A0 /* ContentView+iOS.swift */,
+				4BF811669ACFE8937AD05B75 /* NoteDetailView+iOS.swift */,
+				7A2AA4C52A8A6222D6E01423 /* SBrainApp+iOS.swift */,
+			);
+			name = iOS;
+			path = SBrain/iOS;
+			sourceTree = "<group>";
+		};
 		42AEAF06CEAF5F5F19710B6F /* SBrain */ = {
 			isa = PBXGroup;
 			children = (
@@ -136,6 +197,7 @@
 		89B9CBF6DB70D8B8167118EF = {
 			isa = PBXGroup;
 			children = (
+				0441F0084FC07A1E12224B44 /* iOS */,
 				42AEAF06CEAF5F5F19710B6F /* SBrain */,
 				93F7D0CA0B10B36E23B89BF3 /* Products */,
 			);
@@ -144,6 +206,7 @@
 		93F7D0CA0B10B36E23B89BF3 /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				809D9DA7A8589988B072DF83 /* SBrain-iOS.app */,
 				8E21D81A3BB7AB638BA4B919 /* SBrain.app */,
 			);
 			name = Products;
@@ -152,6 +215,7 @@
 		B1B1F9E1BD7669F707BDB5B6 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7C974AEAF0156F899036E0CA /* Analytics.swift */,
 				1063843C8FF0AAD02172AB79 /* APIClient.swift */,
 				CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */,
 				CCF1EC1647C63785F60A824F /* CalendarStore.swift */,
@@ -162,6 +226,7 @@
 				09F625507856F470275E96B7 /* LocalGraphBuilder.swift */,
 				D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */,
 				0CDA82671719F944056E84CE /* SlackStore.swift */,
+				41A1CE86BC359AB545318E63 /* SyncManager.swift */,
 				F809E41E7C72810A86C8E839 /* TerminalManager.swift */,
 			);
 			path = Services;
@@ -224,9 +289,30 @@
 			packageProductDependencies = (
 				01B4E7973C454AE1A6921772 /* SwiftTerm */,
 				1F7289016E3F4EC647338E91 /* Sparkle */,
+				9646326D038887D30FC2B200 /* TelemetryDeck */,
 			);
 			productName = SBrain;
 			productReference = 8E21D81A3BB7AB638BA4B919 /* SBrain.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E1C289F7A343A10ED7C75878 /* SBrain-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1B697920B436C51327FDD545 /* Build configuration list for PBXNativeTarget "SBrain-iOS" */;
+			buildPhases = (
+				89F68F6FC5586E510D45DB5E /* Sources */,
+				BC36AEB5FA5A3F1E3E60EF9D /* Resources */,
+				63B9433955FDC000D324BFF5 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SBrain-iOS";
+			packageProductDependencies = (
+				C5AB0D238B278A9EEAC171C6 /* TelemetryDeck */,
+			);
+			productName = "SBrain-iOS";
+			productReference = 809D9DA7A8589988B072DF83 /* SBrain-iOS.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -252,6 +338,7 @@
 			packageReferences = (
 				FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93F7D0CA0B10B36E23B89BF3 /* Products */;
@@ -259,6 +346,7 @@
 			projectRoot = "";
 			targets = (
 				05FF8F39F4269AB4766DA373 /* SBrain */,
+				E1C289F7A343A10ED7C75878 /* SBrain-iOS */,
 			);
 		};
 /* End PBXProject section */
@@ -272,6 +360,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BC36AEB5FA5A3F1E3E60EF9D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8CFB03462B8F3A571495F75C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -280,6 +376,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A77C7594B0966FA43A5C197C /* APIClient.swift in Sources */,
+				DE36C220419D157730AE908A /* Analytics.swift in Sources */,
 				C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */,
 				E23F9200A4257323F03BE9C0 /* BrainMapView.swift in Sources */,
 				3D74BA6DD3D10DD373AB01C2 /* CalendarExplorerView.swift in Sources */,
@@ -310,28 +407,82 @@
 				0D96956D05AA105AF58B4A32 /* SlackExplorerView.swift in Sources */,
 				605606D1C5DF6CCADB64A053 /* SlackModels.swift in Sources */,
 				80C783A564C93AACB0965EAC /* SlackStore.swift in Sources */,
+				3DD5FD7BE6B22C409AD5F663 /* SyncManager.swift in Sources */,
 				1CB733DDA08043559653192D /* TerminalManager.swift in Sources */,
 				BCE9BA0330D23F9DC3CF71B6 /* TerminalView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		89F68F6FC5586E510D45DB5E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6E8BB7569941A83AE76AB8C9 /* APIClient.swift in Sources */,
+				9F8CC5D5EF19668AABF9C402 /* Analytics.swift in Sources */,
+				E8926DC63FDF00A0E4A886A8 /* AuthView.swift in Sources */,
+				A2B6498D2995DA2AEEC1BDAF /* BrainMapView+iOS.swift in Sources */,
+				553B1297E992D0AC4EF4D5B5 /* CalendarModels.swift in Sources */,
+				ABD185A0AF4F5A9F6994F803 /* CalendarStore.swift in Sources */,
+				2D09CE5A6DE82120D7009DD7 /* CalendarView.swift in Sources */,
+				4342F2C39E04E3C91035BBF1 /* ContentView+iOS.swift in Sources */,
+				949CA2A7A2AB4FBA07714EDA /* DatabaseBrowserView.swift in Sources */,
+				FA384ADA356BFAED0E9C97A4 /* DatabaseStore.swift in Sources */,
+				FFC36FEA5400642C96C85521 /* DesignTokens.swift in Sources */,
+				EE23C67682C2E865D8475FE1 /* FolderScanner.swift in Sources */,
+				A9340CBF9C5170A509A33787 /* LocalGraphBuilder.swift in Sources */,
+				04006EEECC218EA28B7B7688 /* Note.swift in Sources */,
+				7DFE72565D5AE6A135E359F4 /* NoteDetailView+iOS.swift in Sources */,
+				87E316770F09F617B044418F /* NoteListView.swift in Sources */,
+				F977DF3A7EDB778261FB8B21 /* NoteStore.swift in Sources */,
+				EFD56C11F095B4AC397FDDB9 /* SBButton.swift in Sources */,
+				31919EFA77DB49D5BE093FC6 /* SBCard.swift in Sources */,
+				C2A3D6DE9102B2AE66A84D4E /* SBrainApp+iOS.swift in Sources */,
+				7598489A1E0B3F0FD8D0DA7E /* SearchBar.swift in Sources */,
+				E2198CF04F9BA3D94C1F7C72 /* SettingsView.swift in Sources */,
+				A0BAF80EE604AE9A871954D5 /* SlackAgentView.swift in Sources */,
+				33DECF3D19127E595E09B512 /* SlackModels.swift in Sources */,
+				210B6816C9E60C7048AD23EE /* SlackStore.swift in Sources */,
+				53CF913C88D62F22077029A1 /* SyncManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		5E33B7B0306C0D5FAD030EF3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 8;
+				INFOPLIST_FILE = SBrain/iOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain.ios;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		5EA0D55A81FDFA0364FB0A35 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				INFOPLIST_FILE = SBrain/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.8.0;
+				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
@@ -389,12 +540,12 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -446,11 +597,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -463,17 +614,37 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = SBrain/SBrain.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				INFOPLIST_FILE = SBrain/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.8.0;
+				MARKETING_VERSION = 0.9.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain;
 				SDKROOT = macosx;
 				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		E2EEED6AFE00367915FCF59E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 8;
+				INFOPLIST_FILE = SBrain/iOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.9.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hanmari.sbrain.ios;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -485,6 +656,15 @@
 			buildConfigurations = (
 				78B1B01D312CF52ABFA00301 /* Debug */,
 				5EA0D55A81FDFA0364FB0A35 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		1B697920B436C51327FDD545 /* Build configuration list for PBXNativeTarget "SBrain-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E2EEED6AFE00367915FCF59E /* Debug */,
+				5E33B7B0306C0D5FAD030EF3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -501,6 +681,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 		5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
@@ -529,6 +717,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		9646326D038887D30FC2B200 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
+		C5AB0D238B278A9EEAC171C6 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -4,8 +4,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .ingest import get_status, ingest_folder, partial_ingest_files
-from .models import Note
+from .ingest import get_status, ingest_folder, partial_ingest_files, _split_chunks
+from .models import Chunk, Note
 from .serializers import (
     IngestRequestSerializer,
     NoteDetailSerializer,
@@ -76,6 +76,50 @@ def search(request):
     results = do_search(query, limit)
     result_serializer = SearchResultSerializer(results, many=True)
     return Response(result_serializer.data)
+
+
+@api_view(["POST"])
+def sync_push(request):
+    """macOS → Railway 동기화. 변경된 노트를 클라우드 DB에 반영."""
+    notes_data = request.data.get("notes", [])
+    deleted_ids = request.data.get("deleted_ids", [])
+    synced, errors = 0, []
+
+    # 1. 삭제
+    deleted = 0
+    if deleted_ids:
+        Chunk.objects.filter(note_id__in=deleted_ids).delete()
+        deleted = Note.objects.filter(id__in=deleted_ids).delete()[0]
+
+    # 2. Upsert + Chunk 재생성
+    for nd in notes_data:
+        try:
+            Note.objects.update_or_create(
+                id=nd["id"],
+                defaults={
+                    "path": nd["path"],
+                    "filename": nd["filename"],
+                    "content": nd["content"],
+                },
+            )
+            # Chunk 재생성
+            Chunk.objects.filter(note_id=nd["id"]).delete()
+            chunks = _split_chunks(nd["content"])
+            if chunks:
+                Chunk.objects.bulk_create([
+                    Chunk(
+                        id=f"{nd['id']}_{idx}",
+                        note_id=nd["id"],
+                        chunk_text=text,
+                        chunk_index=idx,
+                    )
+                    for idx, text in enumerate(chunks)
+                ])
+            synced += 1
+        except Exception as e:
+            errors.append({"id": nd.get("id", "?"), "error": str(e)})
+
+    return Response({"synced": synced, "deleted": deleted, "errors": errors})
 
 
 @api_view(["PATCH"])

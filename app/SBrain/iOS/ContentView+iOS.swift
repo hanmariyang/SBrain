@@ -73,6 +73,16 @@ struct IOSContentView: View {
             .tag(IOSTab.settings)
         }
         .tint(SB.Colors.gold600)
+        .onChange(of: selectedTab) { _, newTab in
+            switch newTab {
+            case .brain:
+                Analytics.viewBrainMap(neuronCount: 0)
+            case .notes:
+                Analytics.viewList()
+            case .search, .settings:
+                break
+            }
+        }
         .task {
             // iOS: Railway API에서 노트 로드
             await noteStore.loadCloudNotes()

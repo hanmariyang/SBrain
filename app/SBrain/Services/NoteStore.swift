@@ -211,6 +211,7 @@ class NoteStore: ObservableObject {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             let (data, _) = try await URLSession.shared.data(for: request)
             searchResults = try JSONDecoder().decode([SearchResult].self, from: data)
+            Analytics.searchRecall(resultCount: searchResults.count)
         } catch {
             searchResults = []
         }
@@ -541,6 +542,7 @@ class NoteStore: ObservableObject {
         searchError = nil
         do {
             searchResults = try await api.recall(query: searchQuery)
+            Analytics.searchRecall(resultCount: searchResults.count)
             if searchResults.isEmpty {
                 searchError = "검색 결과가 없습니다 — 프로젝트를 먼저 인덱싱하세요"
             }

@@ -7,6 +7,10 @@ struct SBrainIOSApp: App {
     @StateObject private var slackStore = SlackStore()
     @StateObject private var calendarStore = CalendarStore()
 
+    init() {
+        Analytics.initialize()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -16,6 +20,7 @@ struct SBrainIOSApp: App {
                 .environmentObject(calendarStore)
                 .onAppear {
                     noteStore.syncManager = syncManager
+                    Analytics.appLaunch()
                 }
         }
     }

@@ -39,12 +39,14 @@
 		80C783A564C93AACB0965EAC /* SlackStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CDA82671719F944056E84CE /* SlackStore.swift */; };
 		82F1FF5E887C7DE2EE0CD0BF /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5D342196863002E996A7027 /* ContentView.swift */; };
 		858D2381E38B796A44F304D8 /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74140C2CF4145F55F886B78 /* NoteListView.swift */; };
+		87128545CC05A9D1B28F4DF1 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 9646326D038887D30FC2B200 /* TelemetryDeck */; };
 		87E316770F09F617B044418F /* NoteListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74140C2CF4145F55F886B78 /* NoteListView.swift */; };
 		8BDB6EC126827AC5834CAA22 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE10BC28BD73F99874A555AC /* Note.swift */; };
 		8CFB03462B8F3A571495F75C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E77E57428659F1D47314B230 /* Assets.xcassets */; };
 		949CA2A7A2AB4FBA07714EDA /* DatabaseBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */; };
 		992F529D346BA272AC23C79A /* LocalGraphBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F625507856F470275E96B7 /* LocalGraphBuilder.swift */; };
 		9D907150551731990650F10C /* NoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55BB51AB7A5EF3268E4AA1A /* NoteStore.swift */; };
+		9F8CC5D5EF19668AABF9C402 /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C974AEAF0156F899036E0CA /* Analytics.swift */; };
 		A0BAF80EE604AE9A871954D5 /* SlackAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99ECA63AFA277F0632CE248B /* SlackAgentView.swift */; };
 		A2B6498D2995DA2AEEC1BDAF /* BrainMapView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F18A68C5165AB58EA4C62BE /* BrainMapView+iOS.swift */; };
 		A77C7594B0966FA43A5C197C /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1063843C8FF0AAD02172AB79 /* APIClient.swift */; };
@@ -60,10 +62,12 @@
 		C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */; };
 		D054FA0DC40BE7442F907EE3 /* SBrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7544CAB23D252B03FB65F9C /* SBrainApp.swift */; };
 		D35AC4B925EA79A532E28A93 /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F737901CA8A7C63C9E7127A /* SearchBar.swift */; };
+		DE36C220419D157730AE908A /* Analytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C974AEAF0156F899036E0CA /* Analytics.swift */; };
 		E2198CF04F9BA3D94C1F7C72 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B117FB2D45C49F54240EFFDC /* SettingsView.swift */; };
 		E23F9200A4257323F03BE9C0 /* BrainMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE9E28089788162289A190F /* BrainMapView.swift */; };
 		E3784E6ACFF746D679FA858D /* SlackAgentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99ECA63AFA277F0632CE248B /* SlackAgentView.swift */; };
 		E3CC5871219127F795FBA799 /* DatabaseBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */; };
+		E4BCCAD00208A08A7538EADB /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = C5AB0D238B278A9EEAC171C6 /* TelemetryDeck */; };
 		E8926DC63FDF00A0E4A886A8 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD2CD0E1ED5A1684428A368B /* AuthView.swift */; };
 		EE23C67682C2E865D8475FE1 /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714A8F991F10DB023F90B523 /* FolderScanner.swift */; };
 		EFD56C11F095B4AC397FDDB9 /* SBButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7BD3D89EA799D8E97B3F17E /* SBButton.swift */; };
@@ -92,6 +96,7 @@
 		6C61EE8DD3408FFBC99053B2 /* CalendarModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarModels.swift; sourceTree = "<group>"; };
 		714A8F991F10DB023F90B523 /* FolderScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderScanner.swift; sourceTree = "<group>"; };
 		7A2AA4C52A8A6222D6E01423 /* SBrainApp+iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SBrainApp+iOS.swift"; sourceTree = "<group>"; };
+		7C974AEAF0156F899036E0CA /* Analytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Analytics.swift; sourceTree = "<group>"; };
 		809D9DA7A8589988B072DF83 /* SBrain-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "SBrain-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E21D81A3BB7AB638BA4B919 /* SBrain.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBrain.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9422C4C4FCD2E21859C17D55 /* DatabaseBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseBrowserView.swift; sourceTree = "<group>"; };
@@ -120,12 +125,21 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		63B9433955FDC000D324BFF5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4BCCAD00208A08A7538EADB /* TelemetryDeck in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D7465CB40CBDD100D0BE6D6B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				B1B88A2F48F02573785166D3 /* SwiftTerm in Frameworks */,
 				522E184854B3A41937916B16 /* Sparkle in Frameworks */,
+				87128545CC05A9D1B28F4DF1 /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -201,6 +215,7 @@
 		B1B1F9E1BD7669F707BDB5B6 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7C974AEAF0156F899036E0CA /* Analytics.swift */,
 				1063843C8FF0AAD02172AB79 /* APIClient.swift */,
 				CD86A6C2210D6E3A3ED1E4AB /* BackendManager.swift */,
 				CCF1EC1647C63785F60A824F /* CalendarStore.swift */,
@@ -274,6 +289,7 @@
 			packageProductDependencies = (
 				01B4E7973C454AE1A6921772 /* SwiftTerm */,
 				1F7289016E3F4EC647338E91 /* Sparkle */,
+				9646326D038887D30FC2B200 /* TelemetryDeck */,
 			);
 			productName = SBrain;
 			productReference = 8E21D81A3BB7AB638BA4B919 /* SBrain.app */;
@@ -285,6 +301,7 @@
 			buildPhases = (
 				89F68F6FC5586E510D45DB5E /* Sources */,
 				BC36AEB5FA5A3F1E3E60EF9D /* Resources */,
+				63B9433955FDC000D324BFF5 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -292,6 +309,7 @@
 			);
 			name = "SBrain-iOS";
 			packageProductDependencies = (
+				C5AB0D238B278A9EEAC171C6 /* TelemetryDeck */,
 			);
 			productName = "SBrain-iOS";
 			productReference = 809D9DA7A8589988B072DF83 /* SBrain-iOS.app */;
@@ -320,6 +338,7 @@
 			packageReferences = (
 				FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 93F7D0CA0B10B36E23B89BF3 /* Products */;
@@ -357,6 +376,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A77C7594B0966FA43A5C197C /* APIClient.swift in Sources */,
+				DE36C220419D157730AE908A /* Analytics.swift in Sources */,
 				C5A36108B530C22DF33C804B /* BackendManager.swift in Sources */,
 				E23F9200A4257323F03BE9C0 /* BrainMapView.swift in Sources */,
 				3D74BA6DD3D10DD373AB01C2 /* CalendarExplorerView.swift in Sources */,
@@ -398,6 +418,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6E8BB7569941A83AE76AB8C9 /* APIClient.swift in Sources */,
+				9F8CC5D5EF19668AABF9C402 /* Analytics.swift in Sources */,
 				E8926DC63FDF00A0E4A886A8 /* AuthView.swift in Sources */,
 				A2B6498D2995DA2AEEC1BDAF /* BrainMapView+iOS.swift in Sources */,
 				553B1297E992D0AC4EF4D5B5 /* CalendarModels.swift in Sources */,
@@ -660,6 +681,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 		5447E0B9B6725BF322DF8D77 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
@@ -688,6 +717,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FD18A58BBD5D08BAA66A9A03 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		9646326D038887D30FC2B200 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
+		C5AB0D238B278A9EEAC171C6 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4D82651C64B760C84D9C7F46 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

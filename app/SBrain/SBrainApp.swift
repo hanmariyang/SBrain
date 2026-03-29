@@ -17,6 +17,7 @@ struct SBrainApp: App {
 
     init() {
         updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        Analytics.initialize()
     }
 
     var body: some Scene {
@@ -34,6 +35,7 @@ struct SBrainApp: App {
                 .onAppear {
                     noteStore.syncManager = syncManager
                     backendManager.start()
+                    Analytics.appLaunch()
                     // 앱 시작 2초 후 업데이트 자동 확인
                     checkForUpdatesOnLaunch()
                 }

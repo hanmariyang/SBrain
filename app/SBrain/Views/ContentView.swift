@@ -132,6 +132,20 @@ struct ContentView: View {
         .onChange(of: dbStore.dbBrainGraph?.neurons.count) { _, _ in
             noteStore.dbBrainGraph = dbStore.dbBrainGraph
         }
+        .onChange(of: viewMode) { _, newMode in
+            switch newMode {
+            case .brain:
+                Analytics.viewBrainMap(neuronCount: noteStore.mergedBrainGraph?.neurons.count ?? 0)
+            case .list:
+                Analytics.viewList()
+            case .calendar:
+                Analytics.viewCalendar()
+            case .slack:
+                Analytics.viewSlack()
+            case .database:
+                break
+            }
+        }
     }
 
     // MARK: - Main Content (varies by view mode)

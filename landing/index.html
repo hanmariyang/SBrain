@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SBrain - Your Second Brain, Visualized</title>
+    <meta name="description" content="SBrain turns your local markdown files into a 3D brain map. Explore connections between your notes like neurons and synapses.">
+    <style>
+        :root {
+            --bg-primary: #0D1520;
+            --bg-secondary: #1B2A4A;
+            --bg-card: #162036;
+            --navy-900: #E8ECF2;
+            --navy-700: #B8C4D8;
+            --navy-500: #8FA3C4;
+            --navy-300: #5A7099;
+            --gold-600: #C4973B;
+            --gold-400: #D4AD5A;
+            --gold-200: #E8D49B;
+            --gold-100: rgba(196, 151, 59, 0.1);
+            --accent-green: #4CAF7D;
+            --accent-blue: #3B7CC4;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--navy-900);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Nav */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+            background: rgba(13, 21, 32, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(143, 163, 196, 0.1);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--navy-700), var(--gold-600));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a {
+            color: var(--navy-500);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--gold-400); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gold-600), var(--gold-400));
+            color: #0D1520;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(196, 151, 59, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--navy-700);
+            border: 1px solid rgba(143, 163, 196, 0.2);
+        }
+        .btn-secondary:hover {
+            border-color: var(--gold-600);
+            color: var(--gold-400);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 160px 40px 100px;
+            text-align: center;
+            position: relative;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            background: var(--gold-100);
+            color: var(--gold-600);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            border: 1px solid rgba(196, 151, 59, 0.15);
+        }
+
+        h1 {
+            font-size: clamp(40px, 6vw, 64px);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+            margin-bottom: 24px;
+        }
+
+        h1 .gradient {
+            background: linear-gradient(135deg, var(--gold-200), var(--gold-600));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--navy-500);
+            max-width: 560px;
+            margin: 0 auto 40px;
+            line-height: 1.7;
+        }
+
+        .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+        /* Glow background */
+        .glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .glow-gold { background: var(--gold-600); top: 60px; right: -200px; }
+        .glow-blue { background: var(--accent-blue); bottom: -100px; left: -200px; }
+
+        /* Screenshot */
+        .screenshot-section {
+            padding: 0 40px 80px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .screenshot-frame {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(143, 163, 196, 0.1);
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+            background: var(--bg-card);
+            aspect-ratio: 16 / 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .screenshot-placeholder {
+            color: var(--navy-300);
+            font-size: 14px;
+            text-align: center;
+        }
+        .screenshot-placeholder .icon { font-size: 48px; margin-bottom: 12px; display: block; }
+
+        /* Features */
+        .features {
+            padding: 100px 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            color: var(--gold-600);
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .section-desc {
+            text-align: center;
+            color: var(--navy-500);
+            font-size: 16px;
+            max-width: 500px;
+            margin: 0 auto 60px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(143, 163, 196, 0.08);
+            border-radius: var(--radius);
+            padding: 32px;
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            border-color: rgba(196, 151, 59, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: var(--gold-100);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            color: var(--navy-500);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Brain Metaphor */
+        .metaphor {
+            padding: 80px 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .metaphor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 40px;
+        }
+
+        .metaphor-table th,
+        .metaphor-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(143, 163, 196, 0.08);
+            font-size: 14px;
+        }
+
+        .metaphor-table th {
+            color: var(--navy-500);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metaphor-table td:nth-child(2) {
+            color: var(--gold-400);
+            font-weight: 600;
+        }
+
+        .metaphor-table td:nth-child(3) {
+            color: var(--navy-500);
+        }
+
+        /* Tech Stack */
+        .tech {
+            padding: 80px 40px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .tech-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+
+        .tech-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            background: var(--bg-card);
+            border: 1px solid rgba(143, 163, 196, 0.08);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--navy-700);
+        }
+
+        /* CTA */
+        .cta {
+            padding: 100px 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .cta h2 {
+            font-size: clamp(28px, 4vw, 40px);
+            font-weight: 800;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .cta p {
+            color: var(--navy-500);
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px;
+            border-top: 1px solid rgba(143, 163, 196, 0.08);
+            text-align: center;
+            color: var(--navy-300);
+            font-size: 13px;
+        }
+
+        footer a {
+            color: var(--navy-500);
+            text-decoration: none;
+        }
+        footer a:hover { color: var(--gold-400); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav { padding: 12px 20px; }
+            .nav-links { display: none; }
+            .hero { padding: 120px 20px 60px; }
+            .features, .metaphor, .tech, .cta { padding: 60px 20px; }
+            .screenshot-section { padding: 0 20px 60px; }
+            .feature-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+    <div class="logo">SBrain</div>
+    <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#metaphor">Concept</a>
+        <a href="#tech">Tech</a>
+        <a href="https://github.com/user/sbrain/releases" class="btn btn-primary">Download</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="glow glow-gold"></div>
+    <div class="glow glow-blue"></div>
+
+    <div class="badge">v0.9.0 - Cloud Sync + iOS</div>
+    <h1>Your Second Brain,<br><span class="gradient">Visualized in 3D</span></h1>
+    <p>SBrain indexes your local markdown files and maps them as neurons in a 3D brain. Explore connections, recall memories, and sync across devices.</p>
+
+    <div class="hero-actions">
+        <a href="https://github.com/user/sbrain/releases" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+        </a>
+        <a href="#features" class="btn btn-secondary">Learn more</a>
+    </div>
+</section>
+
+<!-- Screenshot -->
+<section class="screenshot-section">
+    <div class="screenshot-frame">
+        <div class="screenshot-placeholder">
+            <span class="icon">&#129504;</span>
+            App screenshot<br>
+            <small style="color: var(--navy-300)">Replace with actual screenshot</small>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything in your brain, organized</h2>
+    <p class="section-desc">From local files to a living neural network — your knowledge, your way.</p>
+
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">&#129504;</div>
+            <h3>3D Brain Map</h3>
+            <p>Your notes rendered as neurons in a 3D space. Related notes are connected by synapses based on semantic similarity.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">&#128270;</div>
+            <h3>Semantic Recall</h3>
+            <p>Vector-powered search finds related notes by meaning, not just keywords. Like recalling a memory from your brain.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">&#9729;&#65039;</div>
+            <h3>Cloud Sync</h3>
+            <p>Your files stay local on your Mac. Content mirrors to the cloud so you can access it from iPhone — read-only, always in sync.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">&#128241;</div>
+            <h3>iOS Companion</h3>
+            <p>Browse your brain on the go. 3D Brain Map with touch gestures, note viewer, and search — all from your iPhone.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">&#128196;</div>
+            <h3>Multi-Project</h3>
+            <p>Open multiple note folders at once. All projects merge into a single unified brain map for cross-project discovery.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">&#128279;</div>
+            <h3>Slack & Calendar</h3>
+            <p>Connect your Slack workspace and Google Calendar. See conversations and events alongside your notes.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Brain Metaphor -->
+<section class="metaphor" id="metaphor">
+    <div class="section-label">Concept</div>
+    <h2 class="section-title">The Brain Metaphor</h2>
+    <p class="section-desc">SBrain maps familiar concepts to how a brain works.</p>
+
+    <table class="metaphor-table">
+        <thead>
+            <tr>
+                <th>Traditional</th>
+                <th>SBrain</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Note</td>
+                <td>Memory</td>
+                <td>A single document file</td>
+            </tr>
+            <tr>
+                <td>Chunk</td>
+                <td>Neuron</td>
+                <td>A text segment with its embedding</td>
+            </tr>
+            <tr>
+                <td>Connection</td>
+                <td>Synapse</td>
+                <td>Similarity-based link between neurons</td>
+            </tr>
+            <tr>
+                <td>Indexing</td>
+                <td>Memorize</td>
+                <td>Scan folders and store in brain</td>
+            </tr>
+            <tr>
+                <td>Search</td>
+                <td>Recall</td>
+                <td>Retrieve related memories by meaning</td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- Tech Stack -->
+<section class="tech" id="tech">
+    <div class="section-label">Built with</div>
+    <h2 class="section-title">Technology Stack</h2>
+    <p class="section-desc">Native performance, modern architecture</p>
+
+    <div class="tech-pills">
+        <span class="tech-pill">SwiftUI</span>
+        <span class="tech-pill">Python 3.11</span>
+        <span class="tech-pill">Django 5</span>
+        <span class="tech-pill">SQLite + sqlite-vec</span>
+        <span class="tech-pill">PostgreSQL</span>
+        <span class="tech-pill">Anthropic Voyage-3</span>
+        <span class="tech-pill">Railway</span>
+        <span class="tech-pill">Sparkle</span>
+        <span class="tech-pill">TelemetryDeck</span>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+    <div class="glow glow-gold" style="top: auto; bottom: 0; right: auto; left: 50%; transform: translateX(-50%);"></div>
+    <h2>Ready to explore your brain?</h2>
+    <p>Download SBrain for macOS. Free during beta.</p>
+    <div class="hero-actions">
+        <a href="https://github.com/user/sbrain/releases" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download for macOS
+        </a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer>
+    <p>SBrain &copy; 2026 Hanmari. Built with care in Seoul.</p>
+    <p style="margin-top: 8px;">
+        <a href="https://github.com/user/sbrain">GitHub</a>
+    </p>
+</footer>
+
+</body>
+</html>

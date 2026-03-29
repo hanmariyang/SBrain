@@ -55,8 +55,10 @@ class SyncManager: ObservableObject {
             try await api.syncPush(notes: notes, deletedIds: deletedIds)
             lastSyncAt = Date()
             syncError = nil
+            Analytics.syncPush(noteCount: notes.count)
         } catch {
             syncError = error.localizedDescription
+            Analytics.syncError(error.localizedDescription)
         }
     }
 
@@ -111,6 +113,7 @@ class SyncManager: ObservableObject {
     /// JWT 로그인
     func login(username: String, password: String) async throws {
         try await api.cloudLogin(username: username, password: password)
+        Analytics.authLogin()
     }
 
     /// 로그아웃

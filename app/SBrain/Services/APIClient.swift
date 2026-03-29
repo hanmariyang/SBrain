@@ -335,18 +335,45 @@ class APIClient {
 
     // MARK: - Cloud Sync
 
+    /// 클라우드 API 에러
+    enum CloudError: LocalizedError {
+        case serverError(Int, String)
+        case emptyToken
+
+        var errorDescription: String? {
+            switch self {
+            case .serverError(let code, let message):
+                return "서버 에러 (\(code)): \(message)"
+            case .emptyToken:
+                return "서버 응답에 토큰이 없습니다"
+            }
+        }
+    }
+
     /// JWT 로그인 (Railway 클라우드)
     func cloudLogin(username: String, password: String) async throws {
-        var request = cloudRequest(path: "/auth/token/")
+        let url = URL(string: "\(cloudBaseURL)/auth/token/")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: String] = ["username": username, "password": password]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw URLError(.userAuthenticationRequired)
+        let http = response as? HTTPURLResponse
+
+        guard http?.statusCode == 200 else {
+            let message = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["detail"] as? String ?? "Unknown error"
+            throw CloudError.serverError(http?.statusCode ?? 0, message)
         }
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-        jwtAccessToken = json["access"] as? String ?? ""
-        jwtRefreshToken = json["refresh"] as? String ?? ""
+
+        let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+        guard let access = json["access"] as? String, !access.isEmpty,
+              let refresh = json["refresh"] as? String, !refresh.isEmpty else {
+            throw CloudError.emptyToken
+        }
+        jwtAccessToken = access
+        jwtRefreshToken = refresh
     }
 
     /// JWT 토큰 갱신
@@ -360,26 +387,36 @@ class APIClient {
             jwtRefreshToken = ""
             throw URLError(.userAuthenticationRequired)
         }
-        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
         jwtAccessToken = json["access"] as? String ?? ""
+        if let newRefresh = json["refresh"] as? String, !newRefresh.isEmpty {
+            jwtRefreshToken = newRefresh
+        }
     }
 
     /// macOS → Railway 노트 동기화
     func syncPush(notes: [[String: String]], deletedIds: [String]) async throws {
-        // 토큰 없으면 동기화 스킵
         guard !jwtAccessToken.isEmpty else { return }
 
         var request = cloudRequest(path: "/sync/push/")
         let body: [String: Any] = ["notes": notes, "deleted_ids": deletedIds]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let http = response as? HTTPURLResponse
 
-        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+        if http?.statusCode == 401 {
             // 토큰 만료 → 갱신 후 재시도
             try await cloudRefreshToken()
             var retryRequest = cloudRequest(path: "/sync/push/")
             retryRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
-            let _ = try await URLSession.shared.data(for: retryRequest)
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            if let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode >= 400 {
+                let message = String(data: retryData, encoding: .utf8) ?? "Unknown"
+                throw CloudError.serverError(retryHttp.statusCode, message)
+            }
+        } else if let code = http?.statusCode, code >= 400 {
+            let message = String(data: data, encoding: .utf8) ?? "Unknown"
+            throw CloudError.serverError(code, message)
         }
     }
 

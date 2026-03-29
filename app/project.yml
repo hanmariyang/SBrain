@@ -47,6 +47,9 @@ targets:
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSApplicationCategoryType: "public.app-category.productivity"
         NSCameraUsageDescription: "손 제스처 인식을 위해 카메라를 사용합니다"
+        NSDesktopFolderUsageDescription: "프로젝트 폴더의 노트 파일을 읽어 Brain Map을 생성하고 클라우드에 동기화합니다"
+        NSDocumentsFolderUsageDescription: "프로젝트 폴더의 노트 파일을 읽어 Brain Map을 생성하고 클라우드에 동기화합니다"
+        NSDownloadsFolderUsageDescription: "프로젝트 폴더의 노트 파일을 읽어 Brain Map을 생성하고 클라우드에 동기화합니다"
         SUFeedURL: "https://sbrain-production-0f09.up.railway.app/appcast.xml"
         SUPublicEDKey: "5VaUBojjyv4R8Uzu2tzIQULe7Eo9sHKgOf4ZsgqB3Ug="
         SUScheduledCheckInterval: 3600

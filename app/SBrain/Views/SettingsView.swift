@@ -130,7 +130,8 @@ struct SettingsView: View {
                                             // 로그인 성공 → 즉시 전체 동기화
                                             await syncManager.fullSync(projects: noteStore.projects)
                                         } catch {
-                                            cloudLoginError = "로그인 실패"
+                                            cloudLoginError = "로그인 실패: \(error.localizedDescription)"
+                                            print("[CloudLogin] Error: \(error)")
                                         }
                                         isLoggingIn = false
                                     }

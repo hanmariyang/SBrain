@@ -21,7 +21,10 @@ from . import db_browser
 @api_view(["GET"])
 def brain_graph(request):
     threshold = float(request.query_params.get("threshold", 0.5))
-    data = build_brain_graph(similarity_threshold=threshold)
+    try:
+        data = build_brain_graph(similarity_threshold=threshold)
+    except Exception:
+        data = {"neurons": [], "synapses": []}
     return Response(data)
 
 

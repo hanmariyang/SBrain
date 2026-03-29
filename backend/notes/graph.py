@@ -94,6 +94,87 @@ def _pca_2d(vectors: list[list[float]]) -> list[tuple[float, float]]:
     ]
 
 
+def _is_cloud_db() -> bool:
+    """Railway(PostgreSQL) 환경인지 판별."""
+    import os
+    return bool(os.getenv("DATABASE_URL", ""))
+
+
+def _tfidf_similarity(chunks_a: list[str], chunks_b: list[str]) -> float:
+    """TF-IDF 기반 간이 유사도 (임베딩 없이)."""
+    text_a = " ".join(chunks_a).lower()
+    text_b = " ".join(chunks_b).lower()
+    words_a = set(text_a.split())
+    words_b = set(text_b.split())
+    if not words_a or not words_b:
+        return 0.0
+    intersection = words_a & words_b
+    union = words_a | words_b
+    return len(intersection) / len(union)  # Jaccard similarity
+
+
+def _build_cloud_graph(notes, similarity_threshold: float) -> dict:
+    """Railway 환경: 임베딩 없이 청크 텍스트 기반 그래프 생성."""
+    # 노트별 청크 수집
+    note_chunks: dict[str, list[str]] = {}
+    for note in notes:
+        chunks = list(
+            Chunk.objects.filter(note=note).values_list("chunk_text", flat=True)
+        )
+        if chunks:
+            note_chunks[note.id] = chunks
+
+    active_notes = [n for n in notes if n.id in note_chunks]
+    if not active_notes:
+        # 청크가 없어도 노트 자체로 뉴런 생성
+        active_notes = notes
+        for note in notes:
+            note_chunks[note.id] = [note.content[:500]] if note.content else []
+
+    # Fibonacci Sphere 분포 (클라이언트와 동일한 3D 레이아웃)
+    n = len(active_notes)
+    golden = (1 + math.sqrt(5)) / 2
+    positions = []
+    for i in range(n):
+        theta = math.acos(1 - 2 * (i + 0.5) / max(n, 1))
+        phi = 2 * math.pi * i / golden
+        x = (phi % (2 * math.pi)) / (2 * math.pi)
+        y = theta / math.pi
+        positions.append((round(x, 4), round(y, 4)))
+
+    # 뉴런 생성
+    neurons = []
+    for i, note in enumerate(active_notes):
+        x, y = positions[i] if i < len(positions) else (0.5, 0.5)
+        preview_lines = (note.content or "").strip().splitlines()
+        preview = preview_lines[0][:100] if preview_lines else ""
+        neurons.append({
+            "id": note.id,
+            "filename": note.filename,
+            "preview": preview,
+            "x": x,
+            "y": y,
+            "chunk_count": len(note_chunks.get(note.id, [])),
+        })
+
+    # 시냅스 생성 (TF-IDF Jaccard 유사도)
+    synapses = []
+    for i in range(len(active_notes)):
+        for j in range(i + 1, len(active_notes)):
+            sim = _tfidf_similarity(
+                note_chunks.get(active_notes[i].id, []),
+                note_chunks.get(active_notes[j].id, []),
+            )
+            if sim >= similarity_threshold:
+                synapses.append({
+                    "source": active_notes[i].id,
+                    "target": active_notes[j].id,
+                    "strength": round(sim, 4),
+                })
+
+    return {"neurons": neurons, "synapses": synapses}
+
+
 def build_brain_graph(similarity_threshold: float = 0.5) -> dict:
     """
     Returns:
@@ -108,7 +189,17 @@ def build_brain_graph(similarity_threshold: float = 0.5) -> dict:
     if not notes:
         return {"neurons": [], "synapses": []}
 
-    conn = get_vec_db()
+    # Railway(PostgreSQL): sqlite-vec 사용 불가 → TF-IDF 기반
+    if _is_cloud_db():
+        return _build_cloud_graph(notes, similarity_threshold)
+
+    # 로컬(SQLite): sqlite-vec 임베딩 기반
+    try:
+        conn = get_vec_db()
+    except Exception:
+        # sqlite-vec 로드 실패 시 TF-IDF 폴백
+        return _build_cloud_graph(notes, similarity_threshold)
+
     dim = settings.EMBEDDING_DIMENSION
 
     # Collect average embedding per note
@@ -139,7 +230,8 @@ def build_brain_graph(similarity_threshold: float = 0.5) -> dict:
     # Filter notes that have embeddings
     active_notes = [n for n in notes if n.id in note_embeddings]
     if not active_notes:
-        return {"neurons": [], "synapses": []}
+        # 임베딩이 없으면 TF-IDF 폴백
+        return _build_cloud_graph(notes, similarity_threshold)
 
     # PCA 2D projection
     vecs = [note_embeddings[n.id] for n in active_notes]

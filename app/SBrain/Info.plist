@@ -22,6 +22,12 @@
 	<string>public.app-category.productivity</string>
 	<key>NSCameraUsageDescription</key>
 	<string>손 제스처 인식을 위해 카메라를 사용합니다</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>프로젝트 폴더의 노트 파일을 읽어 Brain Map을 생성하고 클라우드에 동기화합니다</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>프로젝트 폴더의 노트 파일을 읽어 Brain Map을 생성하고 클라우드에 동기화합니다</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>프로젝트 폴더의 노트 파일을 읽어 Brain Map을 생성하고 클라우드에 동기화합니다</string>
 	<key>SUAutomaticallyUpdate</key>
 	<true/>
 	<key>SUEnableAutomaticChecks</key>

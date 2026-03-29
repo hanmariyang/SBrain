@@ -158,35 +158,18 @@ class NoteStore: ObservableObject {
         guard !api.jwtAccessToken.isEmpty else { return }
         isLoadingCloud = true
         do {
-            let url = URL(string: "\(api.cloudBaseURL)/notes/")!
-            var request = URLRequest(url: url)
-            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: request)
+            let data = try await api.cloudData(path: "/notes/")
             cloudNotes = try JSONDecoder().decode([Memory].self, from: data)
         } catch {
-            // 토큰 만료 시 갱신 후 재시도
-            do {
-                try await api.cloudRefreshToken()
-                let url = URL(string: "\(api.cloudBaseURL)/notes/")!
-                var request = URLRequest(url: url)
-                request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
-                let (data, _) = try await URLSession.shared.data(for: request)
-                cloudNotes = try JSONDecoder().decode([Memory].self, from: data)
-            } catch {
-                cloudNotes = []
-            }
+            cloudNotes = []
         }
         isLoadingCloud = false
     }
 
     /// Railway API에서 노트 상세 로드 (iOS용)
     func loadCloudNoteContent(id: String) async -> String? {
-        guard !api.jwtAccessToken.isEmpty else { return nil }
         do {
-            let url = URL(string: "\(api.cloudBaseURL)/notes/\(id)/")!
-            var request = URLRequest(url: url)
-            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
-            let (data, _) = try await URLSession.shared.data(for: request)
+            let data = try await api.cloudData(path: "/notes/\(id)/")
             let memory = try JSONDecoder().decode(Memory.self, from: data)
             return memory.content
         } catch {
@@ -202,14 +185,8 @@ class NoteStore: ObservableObject {
         }
         isSearching = true
         do {
-            let url = URL(string: "\(api.cloudBaseURL)/search/")!
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("Bearer \(api.jwtAccessToken)", forHTTPHeaderField: "Authorization")
-            let body: [String: Any] = ["query": searchQuery, "limit": 20]
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            let (data, _) = try await URLSession.shared.data(for: request)
+            let body = try JSONSerialization.data(withJSONObject: ["query": searchQuery, "limit": 20] as [String: Any])
+            let data = try await api.cloudData(path: "/search/", method: "POST", body: body)
             searchResults = try JSONDecoder().decode([SearchResult].self, from: data)
             Analytics.searchRecall(resultCount: searchResults.count)
         } catch {

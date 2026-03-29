@@ -34,6 +34,32 @@ class APIClient {
         return request
     }
 
+    /// 클라우드 API 호출 (401 시 토큰 갱신 후 자동 재시도)
+    func cloudData(path: String, method: String = "GET", body: Data? = nil) async throws -> Data {
+        guard !jwtAccessToken.isEmpty else { throw URLError(.userAuthenticationRequired) }
+
+        var request = cloudRequest(path: path, method: method)
+        request.httpBody = body
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            try await cloudRefreshToken()
+            var retry = cloudRequest(path: path, method: method)
+            retry.httpBody = body
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retry)
+            if let retryHttp = retryResponse as? HTTPURLResponse, retryHttp.statusCode >= 400 {
+                throw CloudError.serverError(retryHttp.statusCode, String(data: retryData, encoding: .utf8) ?? "")
+            }
+            return retryData
+        }
+
+        if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+            throw CloudError.serverError(http.statusCode, String(data: data, encoding: .utf8) ?? "")
+        }
+
+        return data
+    }
+
     // MARK: - Memories (Notes)
 
     func fetchMemories() async throws -> [Memory] {

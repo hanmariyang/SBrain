@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Docs/Design/Logo/logo01.png" alt="SBrain" width="150" />
+</p>
+
 # SBrain — Second Brain
 
 > Your local markdown files as a **3D brain map** — explore connections like neurons and synapses.
@@ -11,6 +15,9 @@ SBrain indexes your notes as **Neurons**, links related notes as **Synapses**, a
 ![Django](https://img.shields.io/badge/Django-5.0-green?logo=django)
 
 ---
+
+<!-- TODO(owner): drop a screenshot or GIF of the 3D Brain Map right here — the single highest-impact addition for a visual app.
+     e.g.  <p align="center"><img src="Docs/screenshots/brain-map.png" width="80%" /></p>  -->
 
 ## Brain Metaphor
 
@@ -93,7 +100,7 @@ SBrain indexes your notes as **Neurons**, links related notes as **Synapses**, a
 ### 1. Clone
 
 ```bash
-git clone https://github.com/your-username/SBrain.git
+git clone https://github.com/hanmariyang/SBrain.git
 cd SBrain
 ```
 
